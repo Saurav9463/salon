@@ -148,6 +148,22 @@
   width: 100%;
 }
 
+.admin-input {
+  width: 100%;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  padding: 0.625rem 0.75rem;
+  color: hsl(var(--foreground));
+  font-family: var(--app-font-mono);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-input:focus {
+  border-color: hsl(var(--primary));
+}
+
 .ghost-btn-gold {
-  @apply border border-primary text-primary hover:bg-primary/10 transition-colors duration-300 font-mono tracking-widest uppercase text-sm;
+  @apply border border-primary text-primary hover:bg-primary/10 transition-colors duration-300 font-mono tracking-widest uppercase text-sm cursor-pointer;
 }

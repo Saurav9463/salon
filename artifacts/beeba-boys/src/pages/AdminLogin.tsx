@@ -1,19 +1,30 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === "admin@beebaboys.com" && password === "admin123") {
-      localStorage.setItem("beeba_admin", "true");
-      setLocation("/admin");
-    } else {
-      setError("Invalid credentials");
+    setError("");
+    setLoading(true);
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError || !data.session) {
+        setError(authError?.message || "Invalid credentials");
+      } else {
+        localStorage.setItem("beeba_admin", data.session.access_token);
+        setLocation("/admin");
+      }
+    } catch {
+      setError("Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,6 +51,7 @@ export default function AdminLogin() {
               <input 
                 type="email" 
                 required
+                autoComplete="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full bg-background border border-border p-3 text-foreground focus:border-primary focus:outline-none transition-colors font-mono"
@@ -51,6 +63,7 @@ export default function AdminLogin() {
               <input 
                 type="password" 
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 className="w-full bg-background border border-border p-3 text-foreground focus:border-primary focus:outline-none transition-colors font-mono"
@@ -59,9 +72,10 @@ export default function AdminLogin() {
 
             <button 
               type="submit" 
-              className="w-full bg-primary text-primary-foreground font-mono uppercase tracking-widest text-sm py-4 hover:bg-primary/90 transition-colors"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground font-mono uppercase tracking-widest text-sm py-4 hover:bg-primary/90 transition-colors disabled:opacity-60"
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
             </button>
           </form>
         </div>

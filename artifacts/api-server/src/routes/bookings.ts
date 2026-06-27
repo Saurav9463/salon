@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { bookingsTable, servicesTable, teamTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { bookingsTable, servicesTable, teamTable, messagesTable } from "@workspace/db";
+import { eq, count, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -40,7 +40,7 @@ router.post("/bookings", async (req, res) => {
       return res.status(400).json({ error: "client_name is required" });
     }
     const [booking] = await db.insert(bookingsTable).values({
-      client_name, client_email, client_phone, service_id, stylist_id, appointment_date, appointment_time, status: "Pending"
+      client_name, client_email, client_phone, service_id, stylist_id, appointment_date, appointment_time, status: "pending"
     }).returning();
     res.status(201).json(booking);
   } catch (err) {
@@ -53,7 +53,7 @@ router.patch("/bookings/:id", async (req, res) => {
   try {
     const { status } = req.body;
     const updates: Record<string, unknown> = {};
-    if (status !== undefined) updates.status = status;
+    if (status !== undefined) updates.status = status.toLowerCase();
     const [booking] = await db.update(bookingsTable).set(updates).where(eq(bookingsTable.id, req.params.id)).returning();
     if (!booking) return res.status(404).json({ error: "Booking not found" });
     res.json(booking);
@@ -75,22 +75,20 @@ router.delete("/bookings/:id", async (req, res) => {
 
 router.get("/stats", async (req, res) => {
   try {
-    const [stats] = await db.execute(sql`
-      SELECT
-        (SELECT COUNT(*) FROM bookings) AS total_bookings,
-        (SELECT COUNT(*) FROM bookings WHERE status = 'Pending') AS pending_bookings,
-        (SELECT COUNT(*) FROM bookings WHERE status = 'Confirmed') AS confirmed_bookings,
-        (SELECT COUNT(*) FROM messages WHERE read = false) AS unread_messages,
-        (SELECT COUNT(*) FROM services WHERE active = true) AS total_services,
-        (SELECT COUNT(*) FROM team WHERE active = true) AS total_team
-    `);
+    const [totalBookings] = await db.select({ value: count() }).from(bookingsTable);
+    const [pendingBookings] = await db.select({ value: count() }).from(bookingsTable).where(sql`lower(${bookingsTable.status}) = 'pending'`);
+    const [confirmedBookings] = await db.select({ value: count() }).from(bookingsTable).where(sql`lower(${bookingsTable.status}) = 'confirmed'`);
+    const [unreadMessages] = await db.select({ value: count() }).from(messagesTable).where(eq(messagesTable.read, false));
+    const [totalServices] = await db.select({ value: count() }).from(servicesTable);
+    const [totalTeam] = await db.select({ value: count() }).from(teamTable);
+
     res.json({
-      total_bookings: Number(stats.total_bookings),
-      pending_bookings: Number(stats.pending_bookings),
-      confirmed_bookings: Number(stats.confirmed_bookings),
-      unread_messages: Number(stats.unread_messages),
-      total_services: Number(stats.total_services),
-      total_team: Number(stats.total_team),
+      total_bookings: Number(totalBookings?.value ?? 0),
+      pending_bookings: Number(pendingBookings?.value ?? 0),
+      confirmed_bookings: Number(confirmedBookings?.value ?? 0),
+      unread_messages: Number(unreadMessages?.value ?? 0),
+      total_services: Number(totalServices?.value ?? 0),
+      total_team: Number(totalTeam?.value ?? 0),
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get stats");
