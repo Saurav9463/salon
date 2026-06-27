@@ -1,0 +1,103 @@
+The site is deployed on Vercel but shows a black screen with error:
+"TypeError: l.map is not a function"
+
+Root cause: Home.tsx, and other pages use hooks like useListServices() 
+and useListTeam() from @workspace/api-client-react which call an 
+Express API server at /api/... — this server does not exist on Vercel. 
+When the API call fails, the hooks return null/undefined instead of 
+an array, and .map() crashes the whole page.
+
+The fix: Replace ALL api-client-react hooks across every page with 
+direct Supabase queries. The supabase client already exists at 
+@/lib/supabase.ts and is correctly configured.
+
+---
+
+## FILES TO FIX
+
+### 1. src/pages/Home.tsx
+Replace:
+  import { useListServices, useListTeam } from "@workspace/api-client-react";
+  const { data: servicesData } = useListServices();
+  const { data: teamData } = useListTeam();
+
+With direct Supabase queries using useEffect + useState:
+  import { useEffect, useState } from "react";
+  import { supabase } from "@/lib/supabase";
+
+  const [servicesData, setServicesData] = useState([]);
+  const [teamData, setTeamData] = useState([]);
+
+  useEffect(() => {
+    supabase.from("services").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setServicesData(data); });
+    supabase.from("team").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setTeamData(data); });
+  }, []);
+
+  // Keep existing fallback logic:
+  const services = servicesData?.length ? servicesData : FALLBACK_SERVICES;
+  const team = teamData?.length ? teamData : FALLBACK_TEAM;
+
+### 2. src/pages/Services.tsx
+Find any useListServices() or similar hook.
+Replace with:
+  const [services, setServices] = useState([]);
+  useEffect(() => {
+    supabase.from("services").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setServices(data); });
+  }, []);
+
+### 3. src/pages/Team.tsx
+Find any useListTeam() or similar hook.
+Replace with:
+  const [team, setTeam] = useState([]);
+  useEffect(() => {
+    supabase.from("team").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setTeam(data); });
+  }, []);
+
+### 4. src/pages/Gallery.tsx
+Find any useListGallery() or similar hook.
+Replace with:
+  const [images, setImages] = useState([]);
+  useEffect(() => {
+    supabase.from("gallery").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setImages(data); });
+  }, []);
+
+### 5. src/pages/Book.tsx
+Find any useListServices() or useListTeam() hooks.
+Replace both with direct Supabase queries as shown above.
+
+### 6. src/pages/AdminDashboard.tsx
+Find ALL hooks from @workspace/api-client-react.
+Replace every one with direct Supabase queries.
+For bookings: supabase.from("bookings").select("*, services(name), team(name)")
+For messages: supabase.from("messages").select("*")
+For stats: use .count() or just check array lengths after fetching
+
+### 7. src/pages/Contact.tsx
+Find any useCreateMessage() or similar mutation hook.
+Replace with a direct Supabase insert:
+  const { error } = await supabase.from("messages").insert([{
+    name: formData.name,
+    email: formData.email,
+    message: formData.message
+  }]);
+
+### 8. GLOBAL RULE
+Search ALL .tsx files in src/ for any import from 
+"@workspace/api-client-react" and remove/replace every one.
+After all replacements, there should be ZERO imports from 
+@workspace/api-client-react anywhere in the src/ folder.
+
+---
+
+## IMPORTANT
+- Do NOT change any UI, styling, or layout
+- Do NOT remove fallback data (FALLBACK_SERVICES, FALLBACK_TEAM)
+- Always initialize useState with [] for arrays, never null
+- Always guard with: if (data) setState(data)
+- After fixing, run: npm run build
+- It must complete with ZERO errors

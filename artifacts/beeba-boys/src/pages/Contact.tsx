@@ -1,33 +1,37 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { useState } from "react";
-import { useCreateMessage } from "@workspace/api-client-react";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Phone, Clock, Mail } from "lucide-react";
 
 export default function Contact() {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
-  const createMessage = useCreateMessage();
+  const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    createMessage.mutate({ data: formData }, {
-      onSuccess: () => {
-        toast({
-          title: "Message Sent",
-          description: "We'll get back to you shortly.",
-        });
-        setFormData({ name: "", email: "", message: "" });
-      },
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Could not send message. Please try again.",
-          variant: "destructive",
-        });
-      }
-    });
+    setIsPending(true);
+    const { error } = await supabase.from("messages").insert([{
+      name: formData.name,
+      email: formData.email,
+      message: formData.message,
+    }]);
+    setIsPending(false);
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Could not send message. Please try again.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Message Sent",
+        description: "We'll get back to you shortly.",
+      });
+      setFormData({ name: "", email: "", message: "" });
+    }
   };
 
   return (
@@ -81,10 +85,10 @@ export default function Contact() {
               </div>
               <button 
                 type="submit" 
-                disabled={createMessage.isPending}
+                disabled={isPending}
                 className="ghost-btn-gold w-full py-4 bg-primary text-primary-foreground hover:bg-primary/90 border-none disabled:opacity-50"
               >
-                {createMessage.isPending ? "Sending..." : "Send Message"}
+                {isPending ? "Sending..." : "Send Message"}
               </button>
             </form>
           </div>

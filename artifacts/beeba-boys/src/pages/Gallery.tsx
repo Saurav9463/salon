@@ -1,8 +1,8 @@
+import { useEffect, useState } from "react";
+import * as React from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useListGallery } from "@workspace/api-client-react";
-import { useState } from "wouter/preact";
-import * as React from "react";
+import { supabase } from "@/lib/supabase";
 import { X } from "lucide-react";
 
 import shopInterior1 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.27_1782561889400.jpeg";
@@ -22,8 +22,18 @@ const FALLBACK_GALLERY = [
 ];
 
 export default function Gallery() {
-  const { data: galleryData, isLoading } = useListGallery();
-  const gallery = galleryData?.length ? galleryData : FALLBACK_GALLERY;
+  const [images, setImages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("gallery").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setImages(data);
+        setIsLoading(false);
+      });
+  }, []);
+
+  const gallery = images?.length ? images : FALLBACK_GALLERY;
 
   const [filter, setFilter] = React.useState("All");
   const [lightboxImg, setLightboxImg] = React.useState<string | null>(null);

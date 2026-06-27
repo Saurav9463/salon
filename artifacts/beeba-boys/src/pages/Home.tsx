@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Link } from "wouter";
-import { useListServices, useListTeam } from "@workspace/api-client-react";
+import { supabase } from "@/lib/supabase";
 import { FALLBACK_SERVICES, FALLBACK_TEAM, TESTIMONIALS } from "@/lib/data";
 import { ArrowRight } from "lucide-react";
 
@@ -11,8 +12,15 @@ import haircut2 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.48_178256188940
 import haircut3 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.55_1782561889407.jpeg";
 
 export default function Home() {
-  const { data: servicesData } = useListServices();
-  const { data: teamData } = useListTeam();
+  const [servicesData, setServicesData] = useState<any[]>([]);
+  const [teamData, setTeamData] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase.from("services").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setServicesData(data); });
+    supabase.from("team").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setTeamData(data); });
+  }, []);
 
   const services = servicesData?.length ? servicesData : FALLBACK_SERVICES;
   const team = teamData?.length ? teamData : FALLBACK_TEAM;

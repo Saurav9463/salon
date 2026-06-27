@@ -1,11 +1,22 @@
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useListTeam } from "@workspace/api-client-react";
+import { supabase } from "@/lib/supabase";
 import { FALLBACK_TEAM } from "@/lib/data";
 import { Link } from "wouter";
 
 export default function Team() {
-  const { data: teamData, isLoading } = useListTeam();
+  const [teamData, setTeamData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("team").select("*").eq("active", true)
+      .then(({ data }) => {
+        if (data) setTeamData(data);
+        setIsLoading(false);
+      });
+  }, []);
+
   const team = teamData?.length ? teamData : FALLBACK_TEAM;
 
   return (

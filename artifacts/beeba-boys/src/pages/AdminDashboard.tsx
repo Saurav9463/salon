@@ -1,19 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { 
-  useListBookings, useUpdateBooking,
-  useListServices, useCreateService, useDeleteService,
-  useListTeam, useCreateTeamMember, useDeleteTeamMember,
-  useListMessages, useUpdateMessage, useDeleteMessage,
-  useGetStats, getListBookingsQueryKey, getListServicesQueryKey, getListTeamQueryKey, getListMessagesQueryKey, getGetStatsQueryKey
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminDashboard() {
   const [location, setLocation] = useLocation();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
@@ -90,10 +81,10 @@ export default function AdminDashboard() {
         
         <div className="flex-1 overflow-auto p-8">
           {activeTab === "dashboard" && <DashboardStatsTab />}
-          {activeTab === "bookings" && <BookingsTab queryClient={queryClient} />}
-          {activeTab === "services" && <ServicesTab queryClient={queryClient} />}
-          {activeTab === "team" && <TeamTab queryClient={queryClient} />}
-          {activeTab === "messages" && <MessagesTab queryClient={queryClient} />}
+          {activeTab === "bookings" && <BookingsTab />}
+          {activeTab === "services" && <ServicesTab />}
+          {activeTab === "team" && <TeamTab />}
+          {activeTab === "messages" && <MessagesTab />}
         </div>
       </main>
     </div>
@@ -101,7 +92,31 @@ export default function AdminDashboard() {
 }
 
 function DashboardStatsTab() {
-  const { data: stats, isLoading, error } = useGetStats();
+  const [stats, setStats] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      const [bookingsRes, messagesRes, servicesRes, teamRes] = await Promise.all([
+        supabase.from("bookings").select("id, status"),
+        supabase.from("messages").select("id, read"),
+        supabase.from("services").select("id"),
+        supabase.from("team").select("id"),
+      ]);
+      const bookings = bookingsRes.data ?? [];
+      const messages = messagesRes.data ?? [];
+      setStats({
+        total_bookings: bookings.length,
+        pending_bookings: bookings.filter(b => b.status?.toLowerCase() === "pending").length,
+        confirmed_bookings: bookings.filter(b => b.status?.toLowerCase() === "confirmed").length,
+        unread_messages: messages.filter(m => !m.read).length,
+        total_services: servicesRes.data?.length ?? 0,
+        total_team: teamRes.data?.length ?? 0,
+      });
+      setIsLoading(false);
+    }
+    fetchStats();
+  }, []);
 
   if (isLoading) return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -110,8 +125,6 @@ function DashboardStatsTab() {
       ))}
     </div>
   );
-
-  if (error) return <div className="text-destructive font-mono text-sm">Failed to load stats. Check API connection.</div>;
 
   const pending = stats?.pending_bookings ?? 0;
   const unread = stats?.unread_messages ?? 0;
@@ -146,17 +159,24 @@ function StatCard({ title, value, highlight = false }: { title: string, value: n
   );
 }
 
-function BookingsTab({ queryClient }: { queryClient: any }) {
-  const { data: bookings = [], isLoading } = useListBookings();
-  const updateBooking = useUpdateBooking();
+function BookingsTab() {
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleStatusChange = (id: string, status: string) => {
-    updateBooking.mutate({ id, data: { status } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListBookingsQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
-      }
-    });
+  const fetchBookings = async () => {
+    const { data } = await supabase
+      .from("bookings")
+      .select("*, services(name), team(name)")
+      .order("created_at", { ascending: false });
+    if (data) setBookings(data);
+    setIsLoading(false);
+  };
+
+  useEffect(() => { fetchBookings(); }, []);
+
+  const handleStatusChange = async (id: string, status: string) => {
+    await supabase.from("bookings").update({ status }).eq("id", id);
+    fetchBookings();
   };
 
   if (isLoading) return <div className="text-muted-foreground font-mono text-sm">Loading bookings...</div>;
@@ -187,8 +207,8 @@ function BookingsTab({ queryClient }: { queryClient: any }) {
                 <div className="font-serif text-base">{booking.client_name}</div>
                 <div className="text-muted-foreground text-xs">{booking.client_phone}</div>
               </td>
-              <td className="px-6 py-4">{booking.service_name || '-'}</td>
-              <td className="px-6 py-4">{booking.stylist_name || '-'}</td>
+              <td className="px-6 py-4">{booking.services?.name || '-'}</td>
+              <td className="px-6 py-4">{booking.team?.name || '-'}</td>
               <td className="px-6 py-4 font-mono text-xs">
                 {booking.appointment_date} <br/> {booking.appointment_time}
               </td>
@@ -235,23 +255,23 @@ function BookingsTab({ queryClient }: { queryClient: any }) {
 }
 
 function AddServiceModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const createService = useCreateService();
   const [form, setForm] = useState({ name: "", category: "Hair", description: "", duration_minutes: "30", price: "" });
+  const [isPending, setIsPending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    createService.mutate({
-      data: {
-        name: form.name,
-        category: form.category,
-        description: form.description || undefined,
-        duration_minutes: parseInt(form.duration_minutes),
-        price: form.price,
-        active: true,
-      }
-    }, {
-      onSuccess: () => { onSuccess(); onClose(); },
-    });
+    setIsPending(true);
+    await supabase.from("services").insert([{
+      name: form.name,
+      category: form.category,
+      description: form.description || undefined,
+      duration_minutes: parseInt(form.duration_minutes),
+      price: form.price,
+      active: true,
+    }]);
+    setIsPending(false);
+    onSuccess();
+    onClose();
   };
 
   return (
@@ -284,8 +304,8 @@ function AddServiceModal({ onClose, onSuccess }: { onClose: () => void; onSucces
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-border py-3 font-mono text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-            <button type="submit" disabled={createService.isPending} className="flex-1 bg-primary text-primary-foreground py-3 font-mono text-sm uppercase tracking-widest disabled:opacity-60">
-              {createService.isPending ? "Saving..." : "Add Service"}
+            <button type="submit" disabled={isPending} className="flex-1 bg-primary text-primary-foreground py-3 font-mono text-sm uppercase tracking-widest disabled:opacity-60">
+              {isPending ? "Saving..." : "Add Service"}
             </button>
           </div>
         </form>
@@ -295,24 +315,24 @@ function AddServiceModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 }
 
 function AddMemberModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const createMember = useCreateTeamMember();
   const [form, setForm] = useState({ name: "", role: "Barber", bio: "", speciality: "", years_experience: "1", photo_url: "" });
+  const [isPending, setIsPending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    createMember.mutate({
-      data: {
-        name: form.name,
-        role: form.role,
-        bio: form.bio || undefined,
-        speciality: form.speciality || undefined,
-        years_experience: parseInt(form.years_experience),
-        photo_url: form.photo_url || undefined,
-        active: true,
-      }
-    }, {
-      onSuccess: () => { onSuccess(); onClose(); },
-    });
+    setIsPending(true);
+    await supabase.from("team").insert([{
+      name: form.name,
+      role: form.role,
+      bio: form.bio || undefined,
+      speciality: form.speciality || undefined,
+      years_experience: parseInt(form.years_experience),
+      photo_url: form.photo_url || undefined,
+      active: true,
+    }]);
+    setIsPending(false);
+    onSuccess();
+    onClose();
   };
 
   return (
@@ -347,8 +367,8 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
           </Field>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-border py-3 font-mono text-sm text-muted-foreground hover:text-foreground">Cancel</button>
-            <button type="submit" disabled={createMember.isPending} className="flex-1 bg-primary text-primary-foreground py-3 font-mono text-sm uppercase tracking-widest disabled:opacity-60">
-              {createMember.isPending ? "Saving..." : "Add Member"}
+            <button type="submit" disabled={isPending} className="flex-1 bg-primary text-primary-foreground py-3 font-mono text-sm uppercase tracking-widest disabled:opacity-60">
+              {isPending ? "Saving..." : "Add Member"}
             </button>
           </div>
         </form>
@@ -366,16 +386,21 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ServicesTab({ queryClient }: { queryClient: any }) {
-  const { data: services = [] } = useListServices();
-  const deleteService = useDeleteService();
+function ServicesTab() {
+  const [services, setServices] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
 
-  const handleDelete = (id: string) => {
-    if(confirm("Delete this service?")) {
-      deleteService.mutate({ id }, {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListServicesQueryKey() })
-      });
+  const fetchServices = async () => {
+    const { data } = await supabase.from("services").select("*").order("created_at", { ascending: false });
+    if (data) setServices(data);
+  };
+
+  useEffect(() => { fetchServices(); }, []);
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Delete this service?")) {
+      await supabase.from("services").delete().eq("id", id);
+      fetchServices();
     }
   };
 
@@ -384,7 +409,7 @@ function ServicesTab({ queryClient }: { queryClient: any }) {
       {showAdd && (
         <AddServiceModal
           onClose={() => setShowAdd(false)}
-          onSuccess={() => queryClient.invalidateQueries({ queryKey: getListServicesQueryKey() })}
+          onSuccess={fetchServices}
         />
       )}
       <div className="mb-6 flex justify-end">
@@ -409,19 +434,21 @@ function ServicesTab({ queryClient }: { queryClient: any }) {
   );
 }
 
-function TeamTab({ queryClient }: { queryClient: any }) {
-  const { data: team = [] } = useListTeam();
-  const deleteTeam = useDeleteTeamMember();
+function TeamTab() {
+  const [team, setTeam] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
 
-  const handleDelete = (id: string) => {
-    if(confirm("Delete this team member?")) {
-      deleteTeam.mutate({ id }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListTeamQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
-        }
-      });
+  const fetchTeam = async () => {
+    const { data } = await supabase.from("team").select("*").order("created_at", { ascending: false });
+    if (data) setTeam(data);
+  };
+
+  useEffect(() => { fetchTeam(); }, []);
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Delete this team member?")) {
+      await supabase.from("team").delete().eq("id", id);
+      fetchTeam();
     }
   };
 
@@ -430,10 +457,7 @@ function TeamTab({ queryClient }: { queryClient: any }) {
       {showAdd && (
         <AddMemberModal
           onClose={() => setShowAdd(false)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: getListTeamQueryKey() });
-            queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
-          }}
+          onSuccess={fetchTeam}
         />
       )}
       <div className="mb-6 flex justify-end">
@@ -466,24 +490,24 @@ function TeamTab({ queryClient }: { queryClient: any }) {
   );
 }
 
-function MessagesTab({ queryClient }: { queryClient: any }) {
-  const { data: messages = [] } = useListMessages();
-  const updateMessage = useUpdateMessage();
-  const deleteMessage = useDeleteMessage();
+function MessagesTab() {
+  const [messages, setMessages] = useState<any[]>([]);
 
-  const handleRead = (id: string, read: boolean) => {
-    updateMessage.mutate({ id, data: { read } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
-      }
-    });
+  const fetchMessages = async () => {
+    const { data } = await supabase.from("messages").select("*").order("created_at", { ascending: false });
+    if (data) setMessages(data);
   };
 
-  const handleDelete = (id: string) => {
-    deleteMessage.mutate({ id }, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMessagesQueryKey() })
-    });
+  useEffect(() => { fetchMessages(); }, []);
+
+  const handleRead = async (id: string, read: boolean) => {
+    await supabase.from("messages").update({ read }).eq("id", id);
+    fetchMessages();
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("messages").delete().eq("id", id);
+    fetchMessages();
   };
 
   return (

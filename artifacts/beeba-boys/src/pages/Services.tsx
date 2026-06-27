@@ -1,13 +1,23 @@
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useListServices } from "@workspace/api-client-react";
+import { supabase } from "@/lib/supabase";
 import { FALLBACK_SERVICES } from "@/lib/data";
 import { Link } from "wouter";
 
 export default function Services() {
-  const { data: servicesData, isLoading } = useListServices();
-  const services = servicesData?.length ? servicesData : FALLBACK_SERVICES;
+  const [servicesData, setServicesData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    supabase.from("services").select("*").eq("active", true)
+      .then(({ data }) => {
+        if (data) setServicesData(data);
+        setIsLoading(false);
+      });
+  }, []);
+
+  const services = servicesData?.length ? servicesData : FALLBACK_SERVICES;
   const categories = [...new Set(services.map(s => s.category))];
 
   return (

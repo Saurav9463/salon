@@ -1,8 +1,8 @@
+import { useEffect, useState, useMemo } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useListServices, useListTeam, useCreateBooking } from "@workspace/api-client-react";
+import { supabase } from "@/lib/supabase";
 import { FALLBACK_SERVICES, FALLBACK_TEAM } from "@/lib/data";
-import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { format, addDays, formatISO } from "date-fns";
@@ -11,10 +11,17 @@ import { Check } from "lucide-react";
 export default function Book() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
-  const { data: servicesData } = useListServices();
-  const { data: teamData } = useListTeam();
-  const createBooking = useCreateBooking();
+
+  const [servicesData, setServicesData] = useState<any[]>([]);
+  const [teamData, setTeamData] = useState<any[]>([]);
+  const [isBooking, setIsBooking] = useState(false);
+
+  useEffect(() => {
+    supabase.from("services").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setServicesData(data); });
+    supabase.from("team").select("*").eq("active", true)
+      .then(({ data }) => { if (data) setTeamData(data); });
+  }, []);
 
   const services = servicesData?.length ? servicesData : FALLBACK_SERVICES;
   const team = teamData?.length ? teamData : FALLBACK_TEAM;
@@ -48,22 +55,23 @@ export default function Book() {
   const activeStylist = team.find(s => s.id === stylistId);
   const primaryService = selectedServices[0];
 
-  const handleBook = () => {
-    const serviceNames = selectedServices.map(s => s.name).join(", ");
-    createBooking.mutate({
-      data: {
-        client_name: details.client_name,
-        client_email: details.client_email || undefined,
-        client_phone: details.client_phone,
-        service_id: primaryService?.id,
-        stylist_id: stylistId || undefined,
-        appointment_date: date,
-        appointment_time: time,
-      }
-    }, {
-      onSuccess: () => setStep(5),
-      onError: () => toast({ title: "Error", description: "Failed to create booking.", variant: "destructive" })
-    });
+  const handleBook = async () => {
+    setIsBooking(true);
+    const { error } = await supabase.from("bookings").insert([{
+      client_name: details.client_name,
+      client_email: details.client_email || undefined,
+      client_phone: details.client_phone,
+      service_id: primaryService?.id,
+      stylist_id: stylistId || undefined,
+      appointment_date: date,
+      appointment_time: time,
+    }]);
+    setIsBooking(false);
+    if (error) {
+      toast({ title: "Error", description: "Failed to create booking.", variant: "destructive" });
+    } else {
+      setStep(5);
+    }
   };
 
   const servicesByCategory = useMemo(() => {
@@ -309,10 +317,10 @@ export default function Book() {
                 <button onClick={prevStep} className="text-muted-foreground hover:text-foreground font-mono uppercase tracking-widest text-sm">Back</button>
                 <button
                   onClick={handleBook}
-                  disabled={!details.client_name || !details.client_phone || createBooking.isPending}
+                  disabled={!details.client_name || !details.client_phone || isBooking}
                   className="ghost-btn-gold bg-primary text-primary-foreground hover:bg-primary/90 border-none px-8 py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {createBooking.isPending ? "Confirming..." : "Confirm Booking"}
+                  {isBooking ? "Confirming..." : "Confirm Booking"}
                 </button>
               </div>
             </div>
