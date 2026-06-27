@@ -1,0 +1,199 @@
+You are a senior full-stack developer and UI/UX designer. Build me a complete, professional salon website with an admin dashboard. I will provide all salon details below. The design must look like it was crafted by a world-class human designer — not AI-generated. Every spacing, typography, and color decision must feel intentional and editorial.
+
+---
+
+## 🧾 SALON DETAILS
+[PASTE YOUR SALON NAME, TAGLINE, SERVICES, TEAM MEMBERS, PRICING, LOCATION, CONTACT, SOCIAL LINKS, WORKING HOURS HERE]
+
+---
+
+## 🎨 DESIGN DIRECTION
+
+**Theme:** Dark luxury. Think high-end editorial — like a blend between a fashion magazine and a premium spa brand.
+
+**Color Palette:**
+- Background: #0A0A0A (true near-black, not gray)
+- Surface cards: #111111
+- Borders: #1E1E1E
+- Primary accent: #C9A96E (warm champagne gold)
+- Secondary accent: #8B6F47 (deeper bronze)
+- Text primary: #F5F0EB (warm off-white)
+- Text muted: #6B6560
+
+**Typography:**
+- Display/headings: `Cormorant Garamond` (Google Font) — elegant, editorial, high-fashion
+- Body: `DM Sans` — clean, modern, highly readable
+- Utility/labels: `DM Mono` — for prices, tags, small metadata
+
+**Aesthetic rules:**
+- Large whitespace — sections must breathe
+- Thin gold dividers and lines as decorative elements
+- Subtle texture overlays (CSS noise or grain) on hero sections
+- No generic stock photo placeholders — use beautiful CSS gradient cards where images are missing
+- Zero rounded corners on cards (sharp, editorial feel)
+- Hover states: gold underline animations, not background color fills
+- Avoid gradients on buttons — use outlined/ghost styles in gold
+- Every font size must follow a clear typographic scale
+
+---
+
+## 📄 PUBLIC WEBSITE PAGES
+
+### 1. HOME PAGE
+- Full-viewport hero with salon name in large Cormorant display type, a one-line tagline, and a CTA button ("Book Now")
+- Subtle animated background: slow CSS grain/noise texture over dark background
+- "Our Philosophy" — 2-line statement about the salon, full width, large editorial text
+- Services preview: horizontal scrolling cards (no grid) with service name, short description, price
+- Team section: photographer-style portraits (placeholder divs), name, role, speciality
+- Gallery strip: masonry-style or horizontal scroll of work photos
+- Testimonials: minimal — just quote text + client name, no stars or cheesy UI
+- Footer: logo, nav links, working hours, address, social icons, copyright
+
+### 2. SERVICES PAGE
+- Services organized by category (Hair, Nails, Skin, etc.)
+- Each service: name, description, duration, price
+- Booking CTA per service
+
+### 3. TEAM PAGE
+- Individual cards for each stylist
+- Name, bio, speciality, years of experience
+- Book with this stylist CTA
+
+### 4. GALLERY PAGE
+- Masonry photo grid with category filter buttons (Hair / Nails / Bridal / etc.)
+- Lightbox on click
+
+### 5. BOOKING PAGE
+- Multi-step booking form:
+  Step 1: Select service
+  Step 2: Select stylist
+  Step 3: Select date/time (use a clean custom calendar UI, no ugly default inputs)
+  Step 4: Enter name, email, phone
+  Step 5: Confirmation screen
+- All booking data saved to Supabase `bookings` table
+
+### 6. CONTACT PAGE
+- Map embed placeholder
+- Contact form (name, email, message) → saved to Supabase `messages` table
+- Working hours, address, phone, social
+
+---
+
+## 🔐 ADMIN DASHBOARD (`/admin`)
+
+**Login:** Simple email/password auth using Supabase Auth. Protect all admin routes.
+
+**Dashboard tabs:**
+
+### 📅 Bookings Manager
+- Table of all bookings: client name, service, stylist, date/time, status
+- Status can be: Pending / Confirmed / Cancelled
+- Admin can change status via dropdown
+- Filter by date, stylist, service
+- Search bar
+
+### 💬 Messages Inbox
+- All contact form submissions
+- Mark as read/unread
+- Delete
+
+### 💇 Services Manager
+- CRUD: Add / Edit / Delete services
+- Fields: name, category, description, duration, price, active toggle
+
+### 👤 Team Manager
+- CRUD: Add / Edit / Delete team members
+- Fields: name, role, bio, speciality, photo URL, active toggle
+
+### 🖼️ Gallery Manager
+- Upload/delete gallery images
+- Assign category tag
+
+### ⚙️ Settings
+- Update salon name, tagline, phone, address, working hours
+- These values should be stored in a `settings` table and pulled dynamically into the public site
+
+---
+
+## 🗄️ SUPABASE SCHEMA
+
+Create and use these tables:
+
+```sql
+-- Bookings
+create table bookings (
+  id uuid primary key default gen_random_uuid(),
+  client_name text,
+  client_email text,
+  client_phone text,
+  service_id uuid references services(id),
+  stylist_id uuid references team(id),
+  appointment_date date,
+  appointment_time time,
+  status text default 'Pending',
+  created_at timestamptz default now()
+);
+
+-- Services
+create table services (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  category text,
+  description text,
+  duration_minutes int,
+  price numeric,
+  active boolean default true
+);
+
+-- Team
+create table team (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  role text,
+  bio text,
+  speciality text,
+  photo_url text,
+  years_experience int,
+  active boolean default true
+);
+
+-- Gallery
+create table gallery (
+  id uuid primary key default gen_random_uuid(),
+  image_url text,
+  category text,
+  created_at timestamptz default now()
+);
+
+-- Messages
+create table messages (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  email text,
+  message text,
+  read boolean default false,
+  created_at timestamptz default now()
+);
+
+-- Settings
+create table settings (
+  key text primary key,
+  value text
+);
+```
+
+---
+
+## ⚙️ TECH STACK
+
+- **Frontend:** React + Vite
+- **Styling:** Tailwind CSS (configured with the custom color palette above) + custom CSS for editorial details
+- **Backend/DB:** Supabase (auth + database + storage)
+- **Routing:** React Router v6
+- **Forms:** React Hook Form
+- **Icons:** Lucide React
+- **Fonts:** Google Fonts (Cormorant Garamond, DM Sans, DM Mono)
+
+---
+
+## 📁 FILE STRUCTURE

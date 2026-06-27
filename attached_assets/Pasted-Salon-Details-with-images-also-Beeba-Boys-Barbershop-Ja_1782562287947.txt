@@ -1,0 +1,142 @@
+Salon Details with images also :
+
+Beeba Boys Barbershop Jalandhar
+3.7
+(30)
+Hairdresser
+
+Overview
+
+Reviews
+
+About
+
+
+Directions
+
+
+Save
+
+
+Nearby
+
+
+Send to phone
+
+
+Share
+
+
+UGF 18, Silver Crown Plaza, PPR Market, Ravindra Nagar, Phase 2, Urban Estate phase II, Jalandhar, Punjab 144001
+
+
+
+Open · Closes 9 pm
+
+
+
+7HXJ+59 Jalandhar, Punjab
+
+Review summary
+
+4.7
+
+30 reviews
+
+"Nice Environment Nd Well Maintained Staff
+
+"The atmosphere is clean and welcoming, and the service was excellent."
+
+"Had an amazing experience at Beeba Boys Barber Shop!"
+
+
+Write a review
+
+Reviews
+
+
+
+
+Sort
+
+
+All
+
+beard fade
+3
+
+precise cut
+2
+
+barber skills
+3
+
+hygiene
+3
+
++4
+
+Sagu Dural
+1 review · 1 photo
+
+
+
+
+
+
+
+3 weeks ago
+New
+had an amazing experience at Beeba Boys Barber Shop! From the moment I walked in, the atmosphere was welcoming and professional... A huge shoutout to Vishal and rahul — his service was absolutely exception. He took the time to understand … More
+
+
+Like
+
+
+Share
+
+Krish Mal
+1 review · 1 photo
+
+
+
+
+
+
+
+3 weeks ago
+New
+"If you are looking for a luxurious pampering session, go to [BEEBA BOYS JALANDHAR. I got a [FACIAL, SPA, MASSAGE HAIRCUT done by [VISHAL , TASLEEM ] and it was flawless. They were hygienic, used high-quality products, and made me feel so relaxed. Worth every penny!"
+
+
+Like
+
+
+Share
+
+Ranbir Singh
+2 reviews · 1 photo
+
+
+
+
+
+
+
+a month ago
+I have been visiting beeba boys almost a year i have been treated in a very well mannered. I recommend who ever is reading this review ask for yogesh because he is the on the best barbers over there.
+
+services details :
+
+✅ QUALITY CHECKLIST (must all be true before done)
+ All pages are fully responsive (mobile, tablet, desktop)
+ Admin dashboard is fully protected — redirect to login if not authenticated
+ Booking form saves correctly to Supabase
+ Services, team, gallery data is pulled dynamically from Supabase (not hardcoded)
+ Settings from Supabase settings table appear live on the public site
+ All CRUD operations in admin actually work
+ No Lorem Ipsum — all placeholder copy matches the salon's voice
+ No bright whites or default blue links anywhere
+ Google Fonts loaded correctly
+ Loading states and error states handled throughout
+Start by scaffolding the full project structure, installing dependencies, configuring Supabase client, setting up Tailwind with the custom theme, then build page by page starting with the Home page. Ask me to confirm the Supabase project URL and anon key before connecting.
