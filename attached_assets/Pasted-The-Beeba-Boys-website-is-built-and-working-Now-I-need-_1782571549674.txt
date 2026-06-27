@@ -1,0 +1,148 @@
+The Beeba Boys website is built and working. Now I need targeted design fixes 
+to elevate it from good to professional-grade. Do NOT rebuild from scratch — 
+only fix the specific issues listed below.
+
+---
+
+## 🔴 CRITICAL FIXES
+
+### 1. Hero Section — Fix empty space and composition
+
+The hero currently has too much dead space. Apply these changes:
+
+- Add a subtle CSS noise/grain texture overlay on the hero background (use 
+  an SVG filter or CSS background noise — not an image)
+- Add a thin horizontal gold line (1px, #C9A96E, 120px wide) above the main 
+  headline, centered
+- Add a small ALL CAPS eyebrow label above that line: 
+  "ESTABLISHED · JALANDHAR · PUNJAB" in DM Mono, 11px, letter-spacing: 0.25em, 
+  color: #C9A96E at 70% opacity
+- Reduce hero min-height from 100vh to 90vh
+- Add a downward scroll indicator at the bottom center of the hero: 
+  a thin vertical line (40px) animating downward in gold
+
+### 2. Fix Admin Dashboard — Roman numeral numbers
+
+The stat cards are showing numbers in Cormorant Garamond which renders them 
+as serif oldstyle figures (looks like Roman numerals I, II, O).
+
+- Override the font for ALL numeric values in stat cards to use DM Sans, 
+  font-weight: 300, font-size: 3rem
+- The label above (TOTAL BOOKINGS, PENDING, etc.) should stay in DM Mono 
+  uppercase tracking
+- The large number should be color: #F5F0EB for neutral stats, 
+  #C9A96E for the highlighted/active card only
+
+### 3. Services Scroll — Add scroll affordance
+
+The horizontal scrolling service cards have no scroll hint:
+
+- Add a gold right-facing arrow icon (Lucide: ArrowRight) at the far right 
+  edge of the section, vertically centered to the cards, with a pulsing 
+  opacity animation (1 → 0.3 → 1, 2s loop)
+- Add a CSS mask on the services container: 
+  mask-image: linear-gradient(to right, black 85%, transparent 100%)
+  This creates a natural fade-out showing more content exists
+- Add this CSS to the scroll container to show a custom scrollbar style:
+  scrollbar-width: none; (hide default scrollbar on all browsers)
+
+---
+
+## 🟡 SIGNIFICANT FIXES
+
+### 4. Philosophy / Statement Section
+
+The large editorial statement ("A sanctuary of refined masculinity...") 
+is floating without context:
+
+- Add above it: a small gold eyebrow label "OUR PHILOSOPHY" in DM Mono, 
+  11px, letter-spacing: 0.3em, color: #C9A96E
+- Add a thin 1px horizontal divider in #1E1E1E below the statement 
+  with 80px margin top and bottom
+- Reduce the section's top padding from whatever it is now to 80px max
+
+### 5. Testimonials — Add visual definition
+
+Each testimonial quote block needs separation:
+
+- Add a left border: border-left: 1px solid #C9A96E on each quote card
+- Add padding-left: 24px inside each card
+- Add a large opening quotation mark " in Cormorant Garamond, 
+  font-size: 5rem, color: #C9A96E at 15% opacity, positioned absolute 
+  top-left of each card (decorative only)
+- Add a very subtle card background: background: #0F0F0F
+- Add a thin top border: border-top: 1px solid #1E1E1E
+
+### 6. Team Section — Fix floating heading
+
+The "Master Barbers" heading is isolated with too much space above it:
+
+- Reduce the gap between the services section and team section to 60px
+- Add a thin full-width divider (1px, #1E1E1E) between sections
+- The subtext "Our craftsmen are artists..." should be color: #6B6560, 
+  max-width: 480px, centered
+
+### 7. Admin Sidebar — Add depth and hover states
+
+- Add a right border to the sidebar: border-right: 1px solid #1E1E1E
+- Add hover state to inactive nav items: 
+  background: #161616, color: #C9A96E, transition: all 0.2s ease
+- The active item gold background (#C9A96E at 10% opacity) already works — 
+  keep it but also add a left border: border-left: 2px solid #C9A96E
+
+### 8. Bookings Table — Add empty state + row styles
+
+- Add zebra striping: every even row gets background: #0D0D0D
+- Add row hover: background: #141414 with transition
+- Add an empty state component: when no bookings exist, show centered text 
+  "No bookings yet" in DM Sans, color: #6B6560, with a calendar icon 
+  (Lucide: CalendarX) above it in #1E1E1E color
+
+---
+
+## 🟢 POLISH FIXES
+
+### 9. Nav "Book Now" Button — Fix padding
+
+- Add padding: 10px 24px to the BOOK NOW button in the navbar
+- Ensure border: 1px solid #C9A96E and no background fill (ghost style)
+- On hover: background: #C9A96E, color: #0A0A0A, transition: 0.2s
+
+### 10. Footer Book Appointment Button
+
+- Match the same border weight and padding as the navbar button
+- Should be: border: 1px solid #C9A96E, padding: 12px 28px, 
+  color: #C9A96E, background: transparent
+- Hover: background: #C9A96E, color: #0A0A0A
+
+### 11. Add Favicon
+
+- Create a simple text-based favicon using a canvas element or inline SVG 
+  with "BB" in Cormorant Garamond gold on dark background
+- Add it to the <head> as a data URI favicon
+
+### 12. Gallery Page — Build if missing
+
+If the Gallery page is empty or missing, create it:
+- Category filter buttons: ALL / HAIR / BEARD / SKIN
+  Style: ghost buttons, gold border, DM Mono uppercase text
+- Masonry grid: CSS columns: 3, gap: 12px
+- Each cell: a dark gradient placeholder card with the category label 
+  centered, aspect-ratio: varies (some tall, some wide) to look like 
+  real photography
+- Lightbox: clicking any card shows it full-screen with a close button
+
+---
+
+## ✅ DO NOT CHANGE
+
+- The overall color palette (#0A0A0A, #C9A96E, #F5F0EB)
+- The Cormorant Garamond + DM Sans + DM Mono font system
+- The admin sidebar structure and navigation
+- The Supabase connection and all data logic
+- The booking form flow
+- The hero badge watermark logo (it's a strong signature element)
+- The footer 4-column layout
+
+After each fix, confirm what was changed. Fix in the order listed above 
+(Critical → Significant → Polish).

@@ -167,3 +167,36 @@
 .ghost-btn-gold {
   @apply border border-primary text-primary hover:bg-primary/10 transition-colors duration-300 font-mono tracking-widest uppercase text-sm cursor-pointer;
 }
+
+/* Hide scrollbar cross-browser */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hero scroll indicator — animated downward line */
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, #C9A96E, transparent);
+  animation: scrollDown 2s ease-in-out infinite;
+}
+
+@keyframes scrollDown {
+  0%   { opacity: 1; transform: translateY(-8px); }
+  50%  { opacity: 0.5; }
+  100% { opacity: 0; transform: translateY(8px); }
+}
+
+/* Gallery scroll arrow pulse */
+.scroll-arrow-pulse {
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+
+@keyframes arrowPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}

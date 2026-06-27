@@ -6,7 +6,7 @@ export function Footer() {
     <footer className="bg-card border-t border-border pt-20 pb-10">
       <div className="container mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-          <div className="col-span-1 md:col-span-1">
+          <div className="col-span-1">
             <Link href="/" className="text-2xl font-serif font-bold tracking-widest text-primary block mb-6">
               BEEBA BOYS
             </Link>
@@ -14,29 +14,37 @@ export function Footer() {
               Where Precision Meets Style. A premium men's grooming salon merging high-end editorial with street-sharp barbershop culture.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-foreground hover:border-primary hover:text-primary transition-colors">
+              <a href="#" className="w-10 h-10 border border-border flex items-center justify-center text-foreground hover:border-primary hover:text-primary transition-colors">
                 <Instagram size={18} />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-foreground hover:border-primary hover:text-primary transition-colors">
+              <a href="#" className="w-10 h-10 border border-border flex items-center justify-center text-foreground hover:border-primary hover:text-primary transition-colors">
                 <Facebook size={18} />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-foreground hover:border-primary hover:text-primary transition-colors">
+              <a href="#" className="w-10 h-10 border border-border flex items-center justify-center text-foreground hover:border-primary hover:text-primary transition-colors">
                 <Twitter size={18} />
               </a>
             </div>
           </div>
-          
+
           <div>
             <h4 className="font-serif text-lg text-foreground mb-6 uppercase tracking-widest">Navigation</h4>
             <ul className="space-y-4">
-              <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link></li>
-              <li><Link href="/services" className="text-muted-foreground hover:text-primary transition-colors">Services</Link></li>
-              <li><Link href="/team" className="text-muted-foreground hover:text-primary transition-colors">Our Team</Link></li>
-              <li><Link href="/gallery" className="text-muted-foreground hover:text-primary transition-colors">Gallery</Link></li>
-              <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Contact</Link></li>
+              {[
+                { href: "/", label: "Home" },
+                { href: "/services", label: "Services" },
+                { href: "/team", label: "Our Team" },
+                { href: "/gallery", label: "Gallery" },
+                { href: "/contact", label: "Contact" },
+              ].map(l => (
+                <li key={l.href}>
+                  <Link href={l.href} className="text-muted-foreground hover:text-primary transition-colors">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-serif text-lg text-foreground mb-6 uppercase tracking-widest">Visit Us</h4>
             <ul className="space-y-4 text-muted-foreground">
@@ -50,10 +58,10 @@ export function Footer() {
               </li>
             </ul>
           </div>
-          
+
           <div>
             <h4 className="font-serif text-lg text-foreground mb-6 uppercase tracking-widest">Hours</h4>
-            <ul className="space-y-4 text-muted-foreground">
+            <ul className="space-y-4 text-muted-foreground mb-8">
               <li className="flex items-center gap-3">
                 <Clock className="text-primary shrink-0" size={18} />
                 <div>
@@ -62,14 +70,29 @@ export function Footer() {
                 </div>
               </li>
             </ul>
-            <div className="mt-8">
-              <Link href="/book" className="ghost-btn-gold px-6 py-3 block text-center w-full">
-                Book Appointment
-              </Link>
-            </div>
+            <Link
+              href="/book"
+              className="block text-center font-mono text-xs uppercase tracking-widest transition-all duration-200"
+              style={{
+                border: "1px solid #C9A96E",
+                color: "#C9A96E",
+                padding: "12px 28px",
+                background: "transparent",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.background = "#C9A96E";
+                (e.currentTarget as HTMLElement).style.color = "#0A0A0A";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.background = "transparent";
+                (e.currentTarget as HTMLElement).style.color = "#C9A96E";
+              }}
+            >
+              Book Appointment
+            </Link>
           </div>
         </div>
-        
+
         <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} Beeba Boys Barbershop. All rights reserved.</p>
           <div className="flex gap-6">

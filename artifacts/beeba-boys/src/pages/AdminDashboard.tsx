@@ -8,7 +8,7 @@ import {
   useGetStats, getListBookingsQueryKey, getListServicesQueryKey, getListTeamQueryKey, getListMessagesQueryKey, getGetStatsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X } from "lucide-react";
+import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminDashboard() {
@@ -45,19 +45,31 @@ export default function AdminDashboard() {
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">Admin</p>
         </div>
         
-        <nav className="flex-1 py-6 px-4 space-y-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-mono transition-colors ${
-                activeTab === tab.id ? "bg-primary/10 text-primary border border-primary/20" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
-            >
-              <tab.icon size={18} />
-              {tab.label}
-            </button>
-          ))}
+        <nav className="flex-1 py-6 px-3 space-y-1">
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-mono transition-all duration-200"
+                style={isActive ? {
+                  background: "rgba(201,169,110,0.10)",
+                  color: "#C9A96E",
+                  borderLeft: "2px solid #C9A96E",
+                  paddingLeft: "14px",
+                } : {
+                  color: "#6B6560",
+                  borderLeft: "2px solid transparent",
+                }}
+                onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = "#161616"; (e.currentTarget as HTMLElement).style.color = "#C9A96E"; } }}
+                onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#6B6560"; } }}
+              >
+                <tab.icon size={18} />
+                {tab.label}
+              </button>
+            );
+          })}
         </nav>
         
         <div className="p-4 border-t border-border">
@@ -162,9 +174,15 @@ function BookingsTab({ queryClient }: { queryClient: any }) {
             <th className="px-6 py-4">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
-          {bookings.map(booking => (
-            <tr key={booking.id} className="hover:bg-muted/10">
+        <tbody>
+          {bookings.map((booking, idx) => (
+            <tr
+              key={booking.id}
+              className="border-b border-border transition-colors duration-150"
+              style={{ background: idx % 2 === 1 ? "#0D0D0D" : "transparent" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#141414")}
+              onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 1 ? "#0D0D0D" : "transparent")}
+            >
               <td className="px-6 py-4">
                 <div className="font-serif text-base">{booking.client_name}</div>
                 <div className="text-muted-foreground text-xs">{booking.client_phone}</div>
@@ -176,8 +194,8 @@ function BookingsTab({ queryClient }: { queryClient: any }) {
               </td>
               <td className="px-6 py-4">
                 <span className={`px-2 py-1 text-xs font-mono uppercase border ${
-                  booking.status?.toLowerCase() === 'pending' ? 'text-yellow-500 border-yellow-500/50' : 
-                  booking.status?.toLowerCase() === 'confirmed' ? 'text-green-500 border-green-500/50' : 
+                  booking.status?.toLowerCase() === 'pending' ? 'text-yellow-500 border-yellow-500/50' :
+                  booking.status?.toLowerCase() === 'confirmed' ? 'text-green-500 border-green-500/50' :
                   booking.status?.toLowerCase() === 'completed' ? 'text-blue-400 border-blue-400/50' :
                   'text-muted-foreground border-border'
                 }`}>
@@ -185,8 +203,8 @@ function BookingsTab({ queryClient }: { queryClient: any }) {
                 </span>
               </td>
               <td className="px-6 py-4">
-                <select 
-                  value={booking.status?.toLowerCase()} 
+                <select
+                  value={booking.status?.toLowerCase()}
                   onChange={(e) => handleStatusChange(booking.id, e.target.value)}
                   className="bg-background border border-border text-xs p-1 text-foreground"
                 >
@@ -199,7 +217,16 @@ function BookingsTab({ queryClient }: { queryClient: any }) {
             </tr>
           ))}
           {bookings.length === 0 && (
-            <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No bookings yet.</td></tr>
+            <tr>
+              <td colSpan={6}>
+                <div className="flex flex-col items-center justify-center py-16 gap-4">
+                  <CalendarX size={40} style={{ color: "#1E1E1E" }} />
+                  <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#6B6560", fontSize: "0.9rem" }}>
+                    No bookings yet
+                  </p>
+                </div>
+              </td>
+            </tr>
           )}
         </tbody>
       </table>
