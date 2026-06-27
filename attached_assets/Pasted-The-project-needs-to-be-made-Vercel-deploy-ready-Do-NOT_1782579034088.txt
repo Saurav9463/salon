@@ -1,0 +1,102 @@
+The project needs to be made Vercel-deploy ready. 
+Do NOT change any UI, pages, or Supabase logic. 
+Only fix the deployment configuration.
+
+## Fix 1 — Rewrite vite.config.ts
+
+Replace the entire vite.config.ts at artifacts/beeba-boys/vite.config.ts 
+with this Vercel-compatible version:
+
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
+
+export default defineConfig({
+  base: "/",
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    },
+    dedupe: ["react", "react-dom"],
+  },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+  },
+  server: {
+    port: 3000,
+    host: "0.0.0.0",
+  },
+});
+
+Important: Remove all @replit/* plugin imports and the PORT/BASE_PATH 
+environment variable checks entirely.
+
+## Fix 2 — Create vercel.json
+
+Create a new file at the ROOT of artifacts/beeba-boys/vercel.json:
+
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ]
+    }
+  ]
+}
+
+## Fix 3 — Create .env.example
+
+Create artifacts/beeba-boys/.env.example:
+
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+
+## Fix 4 — Update package.json scripts
+
+In artifacts/beeba-boys/package.json, make sure scripts are:
+
+"scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview"
+}
+
+Remove the --config vite.config.ts flags and --host 0.0.0.0 flags.
+
+## Fix 5 — Add a README.md
+
+Create artifacts/beeba-boys/README.md with:
+
+# Beeba Boys Barbershop Website
+
+## Local Setup
+1. Clone the repo
+2. cd into artifacts/beeba-boys
+3. Copy .env.example to .env and fill in your Supabase credentials
+4. Run: npm install
+5. Run: npm run dev
+
+## Vercel Deployment
+1. Push repo to GitHub
+2. Go to vercel.com → New Project → Import repo
+3. Set Root Directory to: artifacts/beeba-boys
+4. Framework Preset: Vite
+5. Build Command: npm run build
+6. Output Directory: dist
+7. Add Environment Variables:
+   - VITE_SUPABASE_URL
+   - VITE_SUPABASE_ANON_KEY
+8. Click Deploy
+
+After all 5 fixes, run: npm run build
+It must complete with zero errors before confirming done.
