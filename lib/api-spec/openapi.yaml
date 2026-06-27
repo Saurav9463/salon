@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Beeba Boys Barbershop API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: services
+    description: Barbershop services
+  - name: team
+    description: Team members
+  - name: gallery
+    description: Gallery images
+  - name: bookings
+    description: Appointment bookings
+  - name: messages
+    description: Contact messages
+  - name: settings
+    description: Salon settings
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,398 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List all active services
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Create a service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /services/{id}:
+    get:
+      operationId: getService
+      tags: [services]
+      summary: Get a service by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /team:
+    get:
+      operationId: listTeam
+      tags: [team]
+      summary: List all active team members
+      responses:
+        "200":
+          description: List of team members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+    post:
+      operationId: createTeamMember
+      tags: [team]
+      summary: Create a team member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+
+  /team/{id}:
+    patch:
+      operationId: updateTeamMember
+      tags: [team]
+      summary: Update a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+    delete:
+      operationId: deleteTeamMember
+      tags: [team]
+      summary: Delete a team member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /gallery:
+    get:
+      operationId: listGallery
+      tags: [gallery]
+      summary: List gallery images
+      responses:
+        "200":
+          description: Gallery images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GalleryImage"
+    post:
+      operationId: createGalleryImage
+      tags: [gallery]
+      summary: Add a gallery image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GalleryImageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryImage"
+
+  /gallery/{id}:
+    delete:
+      operationId: deleteGalleryImage
+      tags: [gallery]
+      summary: Delete a gallery image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /bookings:
+    get:
+      operationId: listBookings
+      tags: [bookings]
+      summary: List all bookings (admin)
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{id}:
+    patch:
+      operationId: updateBooking
+      tags: [bookings]
+      summary: Update booking status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+    delete:
+      operationId: deleteBooking
+      tags: [bookings]
+      summary: Delete a booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: List all contact messages
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: createMessage
+      tags: [messages]
+      summary: Submit a contact message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /messages/{id}:
+    patch:
+      operationId: updateMessage
+      tags: [messages]
+      summary: Update message (mark read/unread)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+    delete:
+      operationId: deleteMessage
+      tags: [messages]
+      summary: Delete a message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /settings:
+    get:
+      operationId: listSettings
+      tags: [settings]
+      summary: Get all salon settings
+      responses:
+        "200":
+          description: Settings key-value pairs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+    put:
+      operationId: upsertSettings
+      tags: [settings]
+      summary: Update salon settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [bookings]
+      summary: Get dashboard stats (booking counts, unread messages)
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +436,263 @@ components:
       required:
         - status
 
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: ["string", "null"]
+        duration_minutes:
+          type: ["integer", "null"]
+        price:
+          type: ["number", "null"]
+        active:
+          type: boolean
+      required: [id, name, category, active]
+
+    ServiceInput:
+      type: object
+      required: [name, category]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        duration_minutes:
+          type: integer
+        price:
+          type: number
+        active:
+          type: boolean
+
+    ServiceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        duration_minutes:
+          type: integer
+        price:
+          type: number
+        active:
+          type: boolean
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        bio:
+          type: ["string", "null"]
+        speciality:
+          type: ["string", "null"]
+        photo_url:
+          type: ["string", "null"]
+        years_experience:
+          type: ["integer", "null"]
+        active:
+          type: boolean
+      required: [id, name, role, active]
+
+    TeamMemberInput:
+      type: object
+      required: [name, role]
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        bio:
+          type: string
+        speciality:
+          type: string
+        photo_url:
+          type: string
+        years_experience:
+          type: integer
+        active:
+          type: boolean
+
+    TeamMemberUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        bio:
+          type: string
+        speciality:
+          type: string
+        photo_url:
+          type: string
+        years_experience:
+          type: integer
+        active:
+          type: boolean
+
+    GalleryImage:
+      type: object
+      properties:
+        id:
+          type: string
+        image_url:
+          type: string
+        category:
+          type: string
+        created_at:
+          type: string
+      required: [id, image_url, category]
+
+    GalleryImageInput:
+      type: object
+      required: [image_url, category]
+      properties:
+        image_url:
+          type: string
+        category:
+          type: string
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+        client_name:
+          type: string
+        client_email:
+          type: ["string", "null"]
+        client_phone:
+          type: ["string", "null"]
+        service_id:
+          type: ["string", "null"]
+        stylist_id:
+          type: ["string", "null"]
+        appointment_date:
+          type: ["string", "null"]
+        appointment_time:
+          type: ["string", "null"]
+        status:
+          type: string
+        created_at:
+          type: string
+        service_name:
+          type: ["string", "null"]
+        stylist_name:
+          type: ["string", "null"]
+      required: [id, client_name, status, created_at]
+
+    BookingInput:
+      type: object
+      required: [client_name]
+      properties:
+        client_name:
+          type: string
+        client_email:
+          type: string
+        client_phone:
+          type: string
+        service_id:
+          type: string
+        stylist_id:
+          type: string
+        appointment_date:
+          type: string
+        appointment_time:
+          type: string
+
+    BookingUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        message:
+          type: string
+        read:
+          type: boolean
+        created_at:
+          type: string
+      required: [id, name, email, message, read, created_at]
+
+    MessageInput:
+      type: object
+      required: [name, email, message]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        message:
+          type: string
+
+    MessageUpdate:
+      type: object
+      properties:
+        read:
+          type: boolean
+
+    Setting:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required: [key, value]
+
+    SettingsInput:
+      type: object
+      properties:
+        settings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Setting"
+      required: [settings]
+
+    DashboardStats:
+      type: object
+      properties:
+        total_bookings:
+          type: integer
+        pending_bookings:
+          type: integer
+        confirmed_bookings:
+          type: integer
+        unread_messages:
+          type: integer
+        total_services:
+          type: integer
+        total_team:
+          type: integer
+      required:
+        - total_bookings
+        - pending_bookings
+        - confirmed_bookings
+        - unread_messages
+        - total_services
+        - total_team
