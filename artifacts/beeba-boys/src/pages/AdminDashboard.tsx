@@ -92,7 +92,7 @@ function DashboardStatsTab() {
   const { data: stats, isLoading, error } = useGetStats();
 
   if (isLoading) return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {[...Array(6)].map((_, i) => (
         <div key={i} className="p-6 border border-border bg-card animate-pulse h-32" />
       ))}
@@ -101,12 +101,15 @@ function DashboardStatsTab() {
 
   if (error) return <div className="text-destructive font-mono text-sm">Failed to load stats. Check API connection.</div>;
 
+  const pending = stats?.pending_bookings ?? 0;
+  const unread = stats?.unread_messages ?? 0;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <StatCard title="Total Bookings" value={stats?.total_bookings ?? 0} />
-      <StatCard title="Pending" value={stats?.pending_bookings ?? 0} highlight />
+      <StatCard title="Pending" value={pending} highlight={pending > 0} />
       <StatCard title="Confirmed" value={stats?.confirmed_bookings ?? 0} />
-      <StatCard title="Unread Messages" value={stats?.unread_messages ?? 0} highlight={!!stats?.unread_messages} />
+      <StatCard title="Unread Messages" value={unread} highlight={unread > 0} />
       <StatCard title="Total Services" value={stats?.total_services ?? 0} />
       <StatCard title="Team Members" value={stats?.total_team ?? 0} />
     </div>
@@ -116,8 +119,17 @@ function DashboardStatsTab() {
 function StatCard({ title, value, highlight = false }: { title: string, value: number, highlight?: boolean }) {
   return (
     <div className={`p-6 border ${highlight ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
-      <h3 className="text-sm font-mono tracking-widest text-muted-foreground uppercase mb-2">{title}</h3>
-      <p className={`text-4xl font-serif ${highlight ? 'text-primary' : 'text-foreground'}`}>{value}</p>
+      <h3 className="text-xs font-mono tracking-widest text-muted-foreground uppercase mb-3">{title}</h3>
+      <p
+        className="text-5xl font-light tabular-nums"
+        style={{
+          fontFamily: "'DM Sans', sans-serif",
+          color: highlight ? 'hsl(var(--primary))' : '#F5F0EB',
+          fontWeight: 300,
+        }}
+      >
+        {value}
+      </p>
     </div>
   );
 }
