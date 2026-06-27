@@ -1,0 +1,94 @@
+---
+
+## 🚀 VERCEL DEPLOY READY
+
+The project must be fully ready to deploy on Vercel with zero extra configuration needed.
+
+### vercel.json
+Create this file in the root:
+
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
+    }
+  ]
+}
+
+### vite.config.js
+Make sure the build output is set correctly:
+
+export default {
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+  }
+}
+
+### Environment Variables
+Never hardcode Supabase credentials. Use .env file locally:
+
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+Reference them in code as:
+import.meta.env.VITE_SUPABASE_URL
+import.meta.env.VITE_SUPABASE_ANON_KEY
+
+Create a .env.example file (safe to commit):
+
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+
+Add .env to .gitignore so secrets are never pushed to GitHub.
+
+### package.json scripts
+Ensure these scripts exist:
+
+"scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview"
+}
+
+### README.md
+Generate a clean README with:
+- Project overview
+- Local setup steps (npm install, .env setup, npm run dev)
+- Supabase setup steps (link to schema SQL)
+- Vercel deploy steps:
+  1. Push repo to GitHub
+  2. Import repo on vercel.com
+  3. Set environment variables in Vercel dashboard:
+     VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+  4. Framework preset: Vite
+  5. Build command: npm run build
+  6. Output directory: dist
+  7. Click Deploy
+
+### Admin Route Protection on Vercel
+Since this is a SPA, the vercel.json rewrite handles all routes returning index.html.
+Make sure React Router handles the /admin route guard client-side using a ProtectedRoute component that checks Supabase session before rendering admin pages.
+
+### Supabase Auth Redirect URL
+Remind the user to add their Vercel deployment URL to Supabase:
+Dashboard → Authentication → URL Configuration → Add:
+https://your-project.vercel.app to the Redirect URLs list.
+
+---
+
+## ✅ DEPLOY CHECKLIST (add to quality checklist)
+
+- [ ] vercel.json exists in root with SPA rewrite rule
+- [ ] No hardcoded secrets anywhere in the codebase
+- [ ] .env.example committed, .env in .gitignore  
+- [ ] npm run build completes with zero errors
+- [ ] All routes work after hard refresh on Vercel (SPA rewrite handles this)
+- [ ] README has complete deploy instructions
+- [ ] Supabase redirect URL instructions included for admin auth
