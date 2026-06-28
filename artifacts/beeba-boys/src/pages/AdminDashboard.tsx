@@ -103,7 +103,7 @@ export default function AdminDashboard() {
           <h2 className="font-serif text-xl capitalize">{activeTab}</h2>
         </header>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 w-full min-w-0">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 w-full min-w-0">
           {activeTab === "dashboard" && <DashboardStatsTab />}
           {activeTab === "bookings" && <BookingsTab />}
           {activeTab === "services" && <ServicesTab />}
@@ -591,7 +591,7 @@ function ServicesTab() {
           + Add Service
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
         {services.map(s => (
           <div key={s.id} className="bg-card border border-border p-6 relative group overflow-hidden min-w-0">
             <div className="text-xs text-primary font-mono uppercase mb-2">{s.category}</div>
@@ -654,7 +654,7 @@ function TeamTab() {
           + Add Member
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
         {team.map(m => (
           <div key={m.id} className="bg-card border border-border p-6 relative group flex items-center gap-4 overflow-hidden min-w-0">
             <div className="w-16 h-16 bg-muted rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border">
