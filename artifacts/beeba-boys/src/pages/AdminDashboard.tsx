@@ -30,7 +30,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden w-full max-w-[100vw]">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main content */}
-      <main className="w-full min-w-0 overflow-x-hidden md:ml-60 min-h-screen flex flex-col transition-all duration-300">
+      <main className="w-full min-w-0 overflow-x-hidden md:ml-60 min-h-screen flex flex-col transition-all duration-300 max-w-[calc(100vw-0px)] md:max-w-[calc(100vw-240px)]">
         <header className="h-16 border-b border-border bg-card/50 flex items-center px-4 md:px-8 gap-4">
           <button
             className="md:hidden p-2 text-foreground z-50"
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
           <h2 className="font-serif text-xl capitalize">{activeTab}</h2>
         </header>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 w-full min-w-0">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 w-full min-w-0 max-w-full">
           {activeTab === "dashboard" && <DashboardStatsTab />}
           {activeTab === "bookings" && <BookingsTab />}
           {activeTab === "services" && <ServicesTab />}
@@ -591,7 +591,7 @@ function ServicesTab() {
           + Add Service
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {services.map(s => (
           <div key={s.id} className="bg-card border border-border p-6 relative group overflow-hidden min-w-0">
             <div className="text-xs text-primary font-mono uppercase mb-2">{s.category}</div>
@@ -654,7 +654,7 @@ function TeamTab() {
           + Add Member
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {team.map(m => (
           <div key={m.id} className="bg-card border border-border p-6 relative group flex items-center gap-4 overflow-hidden min-w-0">
             <div className="w-16 h-16 bg-muted rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border">
