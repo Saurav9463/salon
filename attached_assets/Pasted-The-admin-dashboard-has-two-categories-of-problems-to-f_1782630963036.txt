@@ -1,0 +1,197 @@
+The admin dashboard has two categories of problems to fix.
+DO NOT change any UI, design, or public site pages.
+
+---
+
+## PROBLEM A — Admin data not loading (Services, Team, Messages 
+showing empty / Dashboard showing all zeros)
+
+This is a Supabase RLS (Row Level Security) issue. The admin pages 
+are fetching data but RLS is blocking reads because the user session 
+is not being passed correctly, OR the Supabase queries have a bug.
+
+### Fix A1 — Add error logging to every admin data fetch
+
+In every admin page that fetches data, update the Supabase calls 
+to log errors so we can see what's failing:
+
+  supabase.from("services").select("*")
+    .then(({ data, error }) => {
+      if (error) console.error("Services fetch error:", error);
+      setServices(data ?? []);
+    });
+
+Do this for ALL tables: services, team, messages, bookings, 
+and all 6 count queries in the dashboard stats.
+
+### Fix A2 — Fix dashboard stats count queries
+
+The current count queries using { count: "exact", head: true } 
+may not be returning data correctly after the api-client swap.
+
+Replace ALL 6 dashboard stat queries with this pattern that 
+fetches actual rows and counts them client-side (more reliable):
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const [
+        { data: allBookings },
+        { data: pendingBookings },
+        { data: confirmedBookings },
+        { data: unreadMessages },
+        { data: allServices },
+        { data: allTeam },
+      ] = await Promise.all([
+        supabase.from("bookings").select("id"),
+        supabase.from("bookings").select("id").eq("status", "Pending"),
+        supabase.from("bookings").select("id").eq("status", "Confirmed"),
+        supabase.from("messages").select("id").eq("read", false),
+        supabase.from("services").select("id").eq("active", true),
+        supabase.from("team").select("id").eq("active", true),
+      ]);
+      setStats({
+        totalBookings: allBookings?.length ?? 0,
+        pending: pendingBookings?.length ?? 0,
+        confirmed: confirmedBookings?.length ?? 0,
+        unreadMessages: unreadMessages?.length ?? 0,
+        totalServices: allServices?.length ?? 0,
+        teamMembers: allTeam?.length ?? 0,
+      });
+    };
+    fetchStats();
+  }, []);
+
+### Fix A3 — Fix Services admin page fetch
+
+In the admin Services page, replace the fetch with:
+
+  useEffect(() => {
+    supabase
+      .from("services")
+      .select("*")
+      .order("category", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) console.error("Services error:", error);
+        setServices(data ?? []);
+      });
+  }, []);
+
+Remove the .eq("active", true) filter — admin should see ALL 
+services including inactive ones.
+
+### Fix A4 — Fix Team admin page fetch
+
+  useEffect(() => {
+    supabase
+      .from("team")
+      .select("*")
+      .order("name", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) console.error("Team error:", error);
+        setTeam(data ?? []);
+      });
+  }, []);
+
+Remove the .eq("active", true) filter — admin should see ALL members.
+
+### Fix A5 — Fix Messages admin page fetch
+
+  useEffect(() => {
+    supabase
+      .from("messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error("Messages error:", error);
+        setMessages(data ?? []);
+      });
+  }, []);
+
+### Fix A6 — Fix Bookings admin page fetch
+
+  useEffect(() => {
+    supabase
+      .from("bookings")
+      .select(`
+        *,
+        services ( name ),
+        team ( name )
+      `)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error("Bookings error:", error);
+        setBookings(data ?? []);
+      });
+  }, []);
+
+When displaying booking service name: booking.services?.name
+When displaying booking stylist name: booking.team?.name
+
+---
+
+## PROBLEM B — Mobile sidebar not closing
+
+### Fix B1 — Sidebar must close when ANY nav item is tapped
+
+Find the admin sidebar component. On EVERY nav link inside 
+the sidebar, ensure onClick calls the close function:
+
+  onClick={() => { 
+    navigate(path);  // or however routing works
+    setSidebarOpen(false); 
+  }}
+
+If the sidebar uses a prop to control open state, pass 
+onClose={() => setSidebarOpen(false)} to the sidebar component 
+and call it on every link click.
+
+### Fix B2 — Backdrop must close sidebar
+
+The dark overlay behind the open sidebar must close it on tap:
+
+  {sidebarOpen && (
+    <div
+      className="fixed inset-0 bg-black/60 z-30 md:hidden"
+      onClick={() => setSidebarOpen(false)}
+      style={{ touchAction: "none" }}
+    />
+  )}
+
+Make sure this div is rendered BEFORE (below in z-order) the 
+sidebar, so tapping it registers correctly on mobile.
+
+### Fix B3 — Sidebar z-index hierarchy (mobile)
+
+Ensure this z-index order:
+  - Backdrop overlay: z-30
+  - Sidebar panel: z-40  
+  - Hamburger button: z-50
+
+### Fix B4 — Admin layout structure on mobile
+
+The main content area must take FULL width on mobile when 
+sidebar is closed:
+
+  <main className="w-full md:ml-60 min-h-screen p-4 md:p-8 
+                   pt-16 md:pt-8 transition-all duration-300">
+
+Do NOT apply any margin-left on mobile — the sidebar should 
+float OVER the content as an overlay, not push it.
+
+---
+
+## VERIFICATION
+
+After all fixes:
+1. Open admin on mobile — Dashboard must show correct non-zero 
+   counts for Services and Team Members
+2. Tap Services in sidebar — list must show all services
+3. Tap Team in sidebar — list must show all team members  
+4. Tap Messages — list must show (empty state if no messages is fine)
+5. After tapping any sidebar nav item — sidebar MUST close automatically
+6. Tapping the dark overlay behind sidebar — MUST close sidebar
+7. Run: npm run build — zero errors
+
+DO NOT change any desktop admin layout.
+DO NOT change any public site pages.
+DO NOT change any styling or design.

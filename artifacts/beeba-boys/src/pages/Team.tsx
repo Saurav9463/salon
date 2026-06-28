@@ -44,7 +44,7 @@ export default function Team() {
               <div key={member.id} className="group flex flex-col bg-card border border-border">
                 <div className="w-full aspect-[3/4] bg-muted overflow-hidden relative">
                   {member.photo_url ? (
-                    <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                    <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover transition-all duration-500" />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent z-10" />
                   )}

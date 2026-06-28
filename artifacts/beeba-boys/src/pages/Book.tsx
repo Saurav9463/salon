@@ -62,13 +62,15 @@ export default function Book() {
       client_email: details.client_email || undefined,
       client_phone: details.client_phone,
       service_id: primaryService?.id,
-      stylist_id: stylistId || undefined,
+      team_id: stylistId || undefined,
       appointment_date: date,
       appointment_time: time,
+      status: "Pending",
     }]);
     setIsBooking(false);
     if (error) {
-      toast({ title: "Error", description: "Failed to create booking.", variant: "destructive" });
+      console.error("Booking insert error:", error);
+      toast({ title: "Error", description: error.message || "Failed to create booking.", variant: "destructive" });
     } else {
       setStep(5);
     }

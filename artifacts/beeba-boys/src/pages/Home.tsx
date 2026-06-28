@@ -147,7 +147,7 @@ export default function Home() {
                     <img
                       src={member.photo_url}
                       alt={member.name}
-                      className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500"
+                      className="w-full h-full object-cover transition-all duration-500"
                     />
                   ) : (
                     <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -199,7 +199,7 @@ export default function Home() {
                 <img
                   src={img}
                   alt={`Beeba Boys Gallery ${i + 1}`}
-                  className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
                 />
               </div>
             ))}

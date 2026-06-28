@@ -36,6 +36,7 @@ export default function AdminDashboard() {
         <div
           className="fixed inset-0 bg-black/60 z-30 md:hidden"
           onClick={() => setSidebarOpen(false)}
+          style={{ touchAction: "none" }}
         />
       )}
 
@@ -50,7 +51,7 @@ export default function AdminDashboard() {
           <h1 className="text-xl font-serif text-primary">BEEBA BOYS</h1>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">Admin</p>
         </div>
-        
+
         <nav className="flex-1 py-6 px-3 space-y-1">
           {tabs.map(tab => {
             const isActive = activeTab === tab.id;
@@ -77,9 +78,9 @@ export default function AdminDashboard() {
             );
           })}
         </nav>
-        
+
         <div className="p-4 border-t border-border">
-          <button 
+          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm font-mono text-muted-foreground hover:text-destructive transition-colors"
           >
@@ -90,10 +91,10 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main content */}
-      <main className="md:ml-60 min-h-screen flex flex-col">
+      <main className="w-full md:ml-60 min-h-screen flex flex-col transition-all duration-300">
         <header className="h-16 border-b border-border bg-card/50 flex items-center px-4 md:px-8 gap-4">
           <button
-            className="md:hidden p-2 text-foreground"
+            className="md:hidden p-2 text-foreground z-50"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
           >
@@ -101,7 +102,7 @@ export default function AdminDashboard() {
           </button>
           <h2 className="font-serif text-xl capitalize">{activeTab}</h2>
         </header>
-        
+
         <div className="flex-1 overflow-auto p-4 md:p-8">
           {activeTab === "dashboard" && <DashboardStatsTab />}
           {activeTab === "bookings" && <BookingsTab />}
@@ -119,25 +120,38 @@ function DashboardStatsTab() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchStats() {
-      const [bookingsRes, messagesRes, servicesRes, teamRes] = await Promise.all([
-        supabase.from("bookings").select("id, status"),
-        supabase.from("messages").select("id, read"),
-        supabase.from("services").select("id"),
-        supabase.from("team").select("id"),
+    const fetchStats = async () => {
+      const [
+        { data: allBookings, error: e1 },
+        { data: pendingBookings, error: e2 },
+        { data: confirmedBookings, error: e3 },
+        { data: unreadMessages, error: e4 },
+        { data: allServices, error: e5 },
+        { data: allTeam, error: e6 },
+      ] = await Promise.all([
+        supabase.from("bookings").select("id"),
+        supabase.from("bookings").select("id").eq("status", "Pending"),
+        supabase.from("bookings").select("id").eq("status", "Confirmed"),
+        supabase.from("messages").select("id").eq("read", false),
+        supabase.from("services").select("id").eq("active", true),
+        supabase.from("team").select("id").eq("active", true),
       ]);
-      const bookings = bookingsRes.data ?? [];
-      const messages = messagesRes.data ?? [];
+      if (e1) console.error("Bookings stats error:", e1);
+      if (e2) console.error("Pending bookings error:", e2);
+      if (e3) console.error("Confirmed bookings error:", e3);
+      if (e4) console.error("Unread messages error:", e4);
+      if (e5) console.error("Services stats error:", e5);
+      if (e6) console.error("Team stats error:", e6);
       setStats({
-        total_bookings: bookings.length,
-        pending_bookings: bookings.filter(b => b.status?.toLowerCase() === "pending").length,
-        confirmed_bookings: bookings.filter(b => b.status?.toLowerCase() === "confirmed").length,
-        unread_messages: messages.filter(m => !m.read).length,
-        total_services: servicesRes.data?.length ?? 0,
-        total_team: teamRes.data?.length ?? 0,
+        totalBookings: allBookings?.length ?? 0,
+        pending: pendingBookings?.length ?? 0,
+        confirmed: confirmedBookings?.length ?? 0,
+        unreadMessages: unreadMessages?.length ?? 0,
+        totalServices: allServices?.length ?? 0,
+        teamMembers: allTeam?.length ?? 0,
       });
       setIsLoading(false);
-    }
+    };
     fetchStats();
   }, []);
 
@@ -149,17 +163,14 @@ function DashboardStatsTab() {
     </div>
   );
 
-  const pending = stats?.pending_bookings ?? 0;
-  const unread = stats?.unread_messages ?? 0;
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      <StatCard title="Total Bookings" value={stats?.total_bookings ?? 0} />
-      <StatCard title="Pending" value={pending} highlight={pending > 0} />
-      <StatCard title="Confirmed" value={stats?.confirmed_bookings ?? 0} />
-      <StatCard title="Unread Messages" value={unread} highlight={unread > 0} />
-      <StatCard title="Total Services" value={stats?.total_services ?? 0} />
-      <StatCard title="Team Members" value={stats?.total_team ?? 0} />
+      <StatCard title="Total Bookings" value={stats?.totalBookings ?? 0} />
+      <StatCard title="Pending" value={stats?.pending ?? 0} highlight={(stats?.pending ?? 0) > 0} />
+      <StatCard title="Confirmed" value={stats?.confirmed ?? 0} />
+      <StatCard title="Unread Messages" value={stats?.unreadMessages ?? 0} highlight={(stats?.unreadMessages ?? 0) > 0} />
+      <StatCard title="Total Services" value={stats?.totalServices ?? 0} />
+      <StatCard title="Team Members" value={stats?.teamMembers ?? 0} />
     </div>
   );
 }
@@ -187,12 +198,15 @@ function BookingsTab() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchBookings = async () => {
-    const { data } = await supabase
+    supabase
       .from("bookings")
-      .select("*, services(name), team(name)")
-      .order("created_at", { ascending: false });
-    if (data) setBookings(data);
-    setIsLoading(false);
+      .select(`*, services ( name ), team ( name )`)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error("Bookings error:", error);
+        setBookings(data ?? []);
+        setIsLoading(false);
+      });
   };
 
   useEffect(() => { fetchBookings(); }, []);
@@ -235,7 +249,7 @@ function BookingsTab() {
                 <td className="px-6 py-4">{booking.services?.name || '-'}</td>
                 <td className="px-6 py-4">{booking.team?.name || '-'}</td>
                 <td className="px-6 py-4 font-mono text-xs">
-                  {booking.appointment_date} <br/> {booking.appointment_time}
+                  {booking.appointment_date} <br /> {booking.appointment_time}
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs font-mono uppercase border ${
@@ -287,7 +301,7 @@ function AddServiceModal({ onClose, onSuccess }: { onClose: () => void; onSucces
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsPending(true);
-    await supabase.from("services").insert([{
+    const { error } = await supabase.from("services").insert([{
       name: form.name,
       category: form.category,
       description: form.description || undefined,
@@ -295,6 +309,7 @@ function AddServiceModal({ onClose, onSuccess }: { onClose: () => void; onSucces
       price: form.price,
       active: true,
     }]);
+    if (error) console.error("Add service error:", error);
     setIsPending(false);
     onSuccess();
     onClose();
@@ -347,7 +362,7 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsPending(true);
-    await supabase.from("team").insert([{
+    const { error } = await supabase.from("team").insert([{
       name: form.name,
       role: form.role,
       bio: form.bio || undefined,
@@ -356,6 +371,7 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
       photo_url: form.photo_url || undefined,
       active: true,
     }]);
+    if (error) console.error("Add team member error:", error);
     setIsPending(false);
     onSuccess();
     onClose();
@@ -417,15 +433,22 @@ function ServicesTab() {
   const [showAdd, setShowAdd] = useState(false);
 
   const fetchServices = async () => {
-    const { data } = await supabase.from("services").select("*").order("created_at", { ascending: false });
-    if (data) setServices(data);
+    supabase
+      .from("services")
+      .select("*")
+      .order("category", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) console.error("Services error:", error);
+        setServices(data ?? []);
+      });
   };
 
   useEffect(() => { fetchServices(); }, []);
 
   const handleDelete = async (id: string) => {
     if (confirm("Delete this service?")) {
-      await supabase.from("services").delete().eq("id", id);
+      const { error } = await supabase.from("services").delete().eq("id", id);
+      if (error) console.error("Delete service error:", error);
       fetchServices();
     }
   };
@@ -449,12 +472,14 @@ function ServicesTab() {
             <div className="text-xs text-primary font-mono uppercase mb-2">{s.category}</div>
             <h3 className="font-serif text-xl mb-1">{s.name}</h3>
             <div className="text-muted-foreground text-sm mb-2">₹{s.price} · {s.duration_minutes} min</div>
+            {!s.active && <div className="text-xs font-mono text-muted-foreground mb-2 uppercase">[Inactive]</div>}
             {s.description && <p className="text-muted-foreground text-xs">{s.description}</p>}
             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => handleDelete(s.id)} className="text-destructive text-xs font-mono border border-destructive/50 px-2 py-1">Delete</button>
             </div>
           </div>
         ))}
+        {services.length === 0 && <div className="col-span-3 text-center py-8 text-muted-foreground">No services yet.</div>}
       </div>
     </div>
   );
@@ -465,15 +490,22 @@ function TeamTab() {
   const [showAdd, setShowAdd] = useState(false);
 
   const fetchTeam = async () => {
-    const { data } = await supabase.from("team").select("*").order("created_at", { ascending: false });
-    if (data) setTeam(data);
+    supabase
+      .from("team")
+      .select("*")
+      .order("name", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) console.error("Team error:", error);
+        setTeam(data ?? []);
+      });
   };
 
   useEffect(() => { fetchTeam(); }, []);
 
   const handleDelete = async (id: string) => {
     if (confirm("Delete this team member?")) {
-      await supabase.from("team").delete().eq("id", id);
+      const { error } = await supabase.from("team").delete().eq("id", id);
+      if (error) console.error("Delete team error:", error);
       fetchTeam();
     }
   };
@@ -495,7 +527,7 @@ function TeamTab() {
         {team.map(m => (
           <div key={m.id} className="bg-card border border-border p-6 relative group flex items-center gap-4">
             <div className="w-16 h-16 bg-muted rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border">
-               {m.photo_url 
+               {m.photo_url
                  ? <img src={m.photo_url} className="w-full h-full object-cover" alt={m.name} />
                  : <span className="font-serif text-xl text-muted-foreground">{m.name[0]}</span>
                }
@@ -504,6 +536,7 @@ function TeamTab() {
               <h3 className="font-serif text-lg">{m.name}</h3>
               <div className="text-primary text-xs font-mono uppercase">{m.role}</div>
               {m.years_experience && <div className="text-muted-foreground text-xs mt-1">{m.years_experience} yrs exp</div>}
+              {!m.active && <div className="text-xs font-mono text-muted-foreground uppercase">[Inactive]</div>}
             </div>
             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => handleDelete(m.id)} className="text-destructive text-xs font-mono border border-destructive/50 px-2 py-1">Delete</button>
@@ -520,19 +553,27 @@ function MessagesTab() {
   const [messages, setMessages] = useState<any[]>([]);
 
   const fetchMessages = async () => {
-    const { data } = await supabase.from("messages").select("*").order("created_at", { ascending: false });
-    if (data) setMessages(data);
+    supabase
+      .from("messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error("Messages error:", error);
+        setMessages(data ?? []);
+      });
   };
 
   useEffect(() => { fetchMessages(); }, []);
 
   const handleRead = async (id: string, read: boolean) => {
-    await supabase.from("messages").update({ read }).eq("id", id);
+    const { error } = await supabase.from("messages").update({ read }).eq("id", id);
+    if (error) console.error("Update message error:", error);
     fetchMessages();
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from("messages").delete().eq("id", id);
+    const { error } = await supabase.from("messages").delete().eq("id", id);
+    if (error) console.error("Delete message error:", error);
     fetchMessages();
   };
 
