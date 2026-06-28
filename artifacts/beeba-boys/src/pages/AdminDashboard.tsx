@@ -200,7 +200,7 @@ function BookingsTab() {
   const fetchBookings = async () => {
     supabase
       .from("bookings")
-      .select(`*, services ( name ), team ( name )`)
+      .select(`*, services ( name ), team!stylist_id ( name )`)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.error("Bookings error:", error);

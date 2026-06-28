@@ -62,7 +62,7 @@ export default function Book() {
       client_email: details.client_email || undefined,
       client_phone: details.client_phone,
       service_id: primaryService?.id,
-      team_id: stylistId || undefined,
+      stylist_id: stylistId || undefined,
       appointment_date: date,
       appointment_time: time,
       status: "Pending",
