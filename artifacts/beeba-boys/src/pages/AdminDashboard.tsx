@@ -216,21 +216,29 @@ function BookingsTab() {
     fetchBookings();
   };
 
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+  const formatTime = (time: string) => {
+    const [h, m] = time.split(":");
+    const hour = parseInt(h);
+    return `${hour > 12 ? hour - 12 : hour || 12}:${m} ${hour >= 12 ? "PM" : "AM"}`;
+  };
+
   if (isLoading) return <div className="text-muted-foreground font-mono text-sm">Loading bookings...</div>;
 
   return (
     <div>
-      <p className="text-xs text-muted-foreground mb-2 md:hidden">← Scroll to see all columns</p>
       <div className="w-full overflow-x-auto">
-        <table className="w-full min-w-[600px] text-sm text-left bg-card border border-border">
+        <table className="w-full text-sm text-left bg-card border border-border table-fixed">
           <thead className="text-xs font-mono uppercase tracking-widest text-muted-foreground border-b border-border bg-muted/20">
             <tr>
-              <th className="px-6 py-4">Client</th>
-              <th className="px-6 py-4">Service</th>
-              <th className="px-6 py-4">Stylist</th>
-              <th className="px-6 py-4">Date/Time</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Action</th>
+              <th className="px-3 py-3 w-[20%]">Client</th>
+              <th className="px-3 py-3 w-[18%]">Service</th>
+              <th className="px-3 py-3 w-[13%]">Stylist</th>
+              <th className="px-3 py-3 w-[18%]">Date/Time</th>
+              <th className="px-3 py-3 w-[13%]">Status</th>
+              <th className="px-3 py-3 w-[18%]">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -242,18 +250,20 @@ function BookingsTab() {
                 onMouseEnter={e => (e.currentTarget.style.background = "#141414")}
                 onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 1 ? "#0D0D0D" : "transparent")}
               >
-                <td className="px-6 py-4">
-                  <div className="font-serif text-base">{booking.client_name}</div>
-                  <div className="text-muted-foreground text-xs">{booking.client_phone}</div>
+                <td className="px-3 py-3 w-[20%]">
+                  <div className="font-medium text-sm truncate">{booking.client_name}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{booking.client_phone}</div>
                 </td>
-                <td className="px-6 py-4">{booking.service?.name ?? '—'}</td>
-                <td className="px-6 py-4">{booking.stylist?.name ?? '—'}</td>
-                <td className="px-6 py-4 font-mono text-xs">
-                  {booking.appointment_date} <br /> {booking.appointment_time}
+                <td className="px-3 py-3 w-[18%] truncate">{booking.service?.name ?? '—'}</td>
+                <td className="px-3 py-3 w-[13%] truncate">{booking.stylist?.name ?? '—'}</td>
+                <td className="px-3 py-3 w-[18%] font-mono text-xs">
+                  {booking.appointment_date ? formatDate(booking.appointment_date) : '—'}
+                  <br />
+                  {booking.appointment_time ? formatTime(booking.appointment_time) : ''}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-3 py-3 w-[13%]">
                   <span className={`px-2 py-1 text-xs font-mono uppercase border ${
-                    booking.status?.toLowerCase() === 'pending' ? 'text-yellow-500 border-yellow-500/50' :
+                    booking.status?.toLowerCase() === 'pending'   ? 'text-yellow-500 border-yellow-500/50' :
                     booking.status?.toLowerCase() === 'confirmed' ? 'text-green-500 border-green-500/50' :
                     booking.status?.toLowerCase() === 'completed' ? 'text-blue-400 border-blue-400/50' :
                     'text-muted-foreground border-border'
@@ -261,11 +271,11 @@ function BookingsTab() {
                     {booking.status}
                   </span>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-3 py-3 w-[18%]">
                   <select
                     value={booking.status}
                     onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                    className="bg-background border border-border text-xs p-1 text-foreground"
+                    className="w-full max-w-[130px] bg-background border border-border text-foreground text-sm px-2 py-1 outline-none focus:border-primary"
                   >
                     <option value="Pending">Pending</option>
                     <option value="Confirmed">Confirmed</option>
