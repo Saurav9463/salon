@@ -103,7 +103,7 @@ export default function AdminDashboard() {
           <h2 className="font-serif text-xl capitalize">{activeTab}</h2>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 md:p-8">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 w-full min-w-0">
           {activeTab === "dashboard" && <DashboardStatsTab />}
           {activeTab === "bookings" && <BookingsTab />}
           {activeTab === "services" && <ServicesTab />}
@@ -593,12 +593,12 @@ function ServicesTab() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {services.map(s => (
-          <div key={s.id} className="bg-card border border-border p-6 relative group">
+          <div key={s.id} className="bg-card border border-border p-6 relative group overflow-hidden min-w-0">
             <div className="text-xs text-primary font-mono uppercase mb-2">{s.category}</div>
-            <h3 className="font-serif text-xl mb-1">{s.name}</h3>
+            <h3 className="font-serif text-xl mb-1 truncate">{s.name}</h3>
             <div className="text-muted-foreground text-sm mb-2">₹{s.price} · {s.duration_minutes} min</div>
             {!s.active && <div className="text-xs font-mono text-muted-foreground mb-2 uppercase">[Inactive]</div>}
-            {s.description && <p className="text-muted-foreground text-xs">{s.description}</p>}
+            {s.description && <p className="text-muted-foreground text-xs line-clamp-2">{s.description}</p>}
             <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() => handleEdit(s)}
@@ -656,7 +656,7 @@ function TeamTab() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {team.map(m => (
-          <div key={m.id} className="bg-card border border-border p-6 relative group flex items-center gap-4">
+          <div key={m.id} className="bg-card border border-border p-6 relative group flex items-center gap-4 overflow-hidden min-w-0">
             <div className="w-16 h-16 bg-muted rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border">
                {m.photo_url
                  ? <img src={m.photo_url} className="w-full h-full object-cover" alt={m.name} />
