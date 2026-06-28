@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX } from "lucide-react";
+import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminDashboard() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const isAdmin = localStorage.getItem("beeba_admin");
@@ -29,8 +30,22 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0">
+    <div className="min-h-screen bg-background">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-40 w-60 bg-card border-r border-border
+        flex flex-col transition-transform duration-300
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        md:translate-x-0
+      `}>
         <div className="p-6 border-b border-border">
           <h1 className="text-xl font-serif text-primary">BEEBA BOYS</h1>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">Admin</p>
@@ -42,7 +57,7 @@ export default function AdminDashboard() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm font-mono transition-all duration-200"
                 style={isActive ? {
                   background: "rgba(201,169,110,0.10)",
@@ -74,12 +89,20 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-16 border-b border-border bg-card/50 flex items-center px-8">
+      {/* Main content */}
+      <main className="md:ml-60 min-h-screen flex flex-col">
+        <header className="h-16 border-b border-border bg-card/50 flex items-center px-4 md:px-8 gap-4">
+          <button
+            className="md:hidden p-2 text-foreground"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <h2 className="font-serif text-xl capitalize">{activeTab}</h2>
         </header>
         
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-auto p-4 md:p-8">
           {activeTab === "dashboard" && <DashboardStatsTab />}
           {activeTab === "bookings" && <BookingsTab />}
           {activeTab === "services" && <ServicesTab />}
@@ -119,9 +142,9 @@ function DashboardStatsTab() {
   }, []);
 
   if (isLoading) return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="p-6 border border-border bg-card animate-pulse h-32" />
+        <div key={i} className="p-4 md:p-6 border border-border bg-card animate-pulse h-28 md:h-32" />
       ))}
     </div>
   );
@@ -130,7 +153,7 @@ function DashboardStatsTab() {
   const unread = stats?.unread_messages ?? 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
       <StatCard title="Total Bookings" value={stats?.total_bookings ?? 0} />
       <StatCard title="Pending" value={pending} highlight={pending > 0} />
       <StatCard title="Confirmed" value={stats?.confirmed_bookings ?? 0} />
@@ -143,10 +166,10 @@ function DashboardStatsTab() {
 
 function StatCard({ title, value, highlight = false }: { title: string, value: number, highlight?: boolean }) {
   return (
-    <div className={`p-6 border ${highlight ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
+    <div className={`p-4 md:p-6 border ${highlight ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
       <h3 className="text-xs font-mono tracking-widest text-muted-foreground uppercase mb-3">{title}</h3>
       <p
-        className="text-5xl font-light tabular-nums"
+        className="text-3xl md:text-5xl font-light tabular-nums mt-2"
         style={{
           fontFamily: "'DM Sans', sans-serif",
           color: highlight ? 'hsl(var(--primary))' : '#F5F0EB',
@@ -182,74 +205,77 @@ function BookingsTab() {
   if (isLoading) return <div className="text-muted-foreground font-mono text-sm">Loading bookings...</div>;
 
   return (
-    <div className="bg-card border border-border overflow-hidden">
-      <table className="w-full text-sm text-left">
-        <thead className="text-xs font-mono uppercase tracking-widest text-muted-foreground border-b border-border bg-muted/20">
-          <tr>
-            <th className="px-6 py-4">Client</th>
-            <th className="px-6 py-4">Service</th>
-            <th className="px-6 py-4">Stylist</th>
-            <th className="px-6 py-4">Date/Time</th>
-            <th className="px-6 py-4">Status</th>
-            <th className="px-6 py-4">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bookings.map((booking, idx) => (
-            <tr
-              key={booking.id}
-              className="border-b border-border transition-colors duration-150"
-              style={{ background: idx % 2 === 1 ? "#0D0D0D" : "transparent" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#141414")}
-              onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 1 ? "#0D0D0D" : "transparent")}
-            >
-              <td className="px-6 py-4">
-                <div className="font-serif text-base">{booking.client_name}</div>
-                <div className="text-muted-foreground text-xs">{booking.client_phone}</div>
-              </td>
-              <td className="px-6 py-4">{booking.services?.name || '-'}</td>
-              <td className="px-6 py-4">{booking.team?.name || '-'}</td>
-              <td className="px-6 py-4 font-mono text-xs">
-                {booking.appointment_date} <br/> {booking.appointment_time}
-              </td>
-              <td className="px-6 py-4">
-                <span className={`px-2 py-1 text-xs font-mono uppercase border ${
-                  booking.status?.toLowerCase() === 'pending' ? 'text-yellow-500 border-yellow-500/50' :
-                  booking.status?.toLowerCase() === 'confirmed' ? 'text-green-500 border-green-500/50' :
-                  booking.status?.toLowerCase() === 'completed' ? 'text-blue-400 border-blue-400/50' :
-                  'text-muted-foreground border-border'
-                }`}>
-                  {booking.status}
-                </span>
-              </td>
-              <td className="px-6 py-4">
-                <select
-                  value={booking.status?.toLowerCase()}
-                  onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                  className="bg-background border border-border text-xs p-1 text-foreground"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </td>
-            </tr>
-          ))}
-          {bookings.length === 0 && (
+    <div>
+      <p className="text-xs text-muted-foreground mb-2 md:hidden">← Scroll to see all columns</p>
+      <div className="w-full overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <table className="min-w-[700px] w-full text-sm text-left bg-card border border-border">
+          <thead className="text-xs font-mono uppercase tracking-widest text-muted-foreground border-b border-border bg-muted/20">
             <tr>
-              <td colSpan={6}>
-                <div className="flex flex-col items-center justify-center py-16 gap-4">
-                  <CalendarX size={40} style={{ color: "#1E1E1E" }} />
-                  <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#6B6560", fontSize: "0.9rem" }}>
-                    No bookings yet
-                  </p>
-                </div>
-              </td>
+              <th className="px-6 py-4">Client</th>
+              <th className="px-6 py-4">Service</th>
+              <th className="px-6 py-4">Stylist</th>
+              <th className="px-6 py-4">Date/Time</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Action</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {bookings.map((booking, idx) => (
+              <tr
+                key={booking.id}
+                className="border-b border-border transition-colors duration-150"
+                style={{ background: idx % 2 === 1 ? "#0D0D0D" : "transparent" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#141414")}
+                onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 1 ? "#0D0D0D" : "transparent")}
+              >
+                <td className="px-6 py-4">
+                  <div className="font-serif text-base">{booking.client_name}</div>
+                  <div className="text-muted-foreground text-xs">{booking.client_phone}</div>
+                </td>
+                <td className="px-6 py-4">{booking.services?.name || '-'}</td>
+                <td className="px-6 py-4">{booking.team?.name || '-'}</td>
+                <td className="px-6 py-4 font-mono text-xs">
+                  {booking.appointment_date} <br/> {booking.appointment_time}
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 text-xs font-mono uppercase border ${
+                    booking.status?.toLowerCase() === 'pending' ? 'text-yellow-500 border-yellow-500/50' :
+                    booking.status?.toLowerCase() === 'confirmed' ? 'text-green-500 border-green-500/50' :
+                    booking.status?.toLowerCase() === 'completed' ? 'text-blue-400 border-blue-400/50' :
+                    'text-muted-foreground border-border'
+                  }`}>
+                    {booking.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <select
+                    value={booking.status?.toLowerCase()}
+                    onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                    className="bg-background border border-border text-xs p-1 text-foreground"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+            {bookings.length === 0 && (
+              <tr>
+                <td colSpan={6}>
+                  <div className="flex flex-col items-center justify-center py-16 gap-4">
+                    <CalendarX size={40} style={{ color: "#1E1E1E" }} />
+                    <p style={{ fontFamily: "'DM Sans', sans-serif", color: "#6B6560", fontSize: "0.9rem" }}>
+                      No bookings yet
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

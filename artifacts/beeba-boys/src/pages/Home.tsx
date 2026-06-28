@@ -45,7 +45,7 @@ export default function Home() {
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
           {/* Eyebrow */}
           <p
-            className="font-mono uppercase mb-4 tracking-[0.25em]"
+            className="font-mono uppercase mb-4 tracking-[0.15em] md:tracking-[0.25em] text-center px-4"
             style={{ fontSize: 11, color: "rgba(201,169,110,0.70)" }}
           >
             Established · Jalandhar · Punjab
@@ -53,7 +53,7 @@ export default function Home() {
           {/* Gold line */}
           <div className="gold-divider w-[120px] mx-auto mb-8" />
 
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-serif text-foreground mb-6 tracking-tight leading-none">
+          <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-serif text-foreground mb-6 tracking-tight leading-none">
             BEEBA <span className="text-primary italic">BOYS</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground uppercase tracking-[0.2em] mb-12">
@@ -182,15 +182,19 @@ export default function Home() {
         </div>
 
         <div className="relative">
-          {/* Scroll container with mask fade */}
           <div
             className="flex gap-4 px-4 md:px-8 overflow-x-auto pb-8 snap-x no-scrollbar"
-            style={{ maskImage: "linear-gradient(to right, black 85%, transparent 100%)", WebkitMaskImage: "linear-gradient(to right, black 85%, transparent 100%)" }}
+            style={{
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+              maskImage: "linear-gradient(to right, black 80%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to right, black 80%, transparent 100%)",
+            }}
           >
             {galleryImages.map((img, i) => (
               <div
                 key={i}
-                className="min-w-[80vw] md:min-w-[400px] h-[500px] shrink-0 snap-center border border-border overflow-hidden group"
+                className="min-w-[85vw] md:min-w-[400px] h-[300px] md:h-[500px] shrink-0 snap-center border border-border overflow-hidden group"
               >
                 <img
                   src={img}
@@ -230,7 +234,6 @@ export default function Home() {
                   background: "#0F0F0F",
                 }}
               >
-                {/* Decorative quote mark */}
                 <span
                   className="absolute top-2 left-4 font-serif leading-none select-none pointer-events-none"
                   style={{ fontSize: "5rem", color: "rgba(201,169,110,0.15)", lineHeight: 1 }}

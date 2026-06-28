@@ -1,0 +1,225 @@
+Fix ALL mobile responsiveness issues on the site. 
+DO NOT change any desktop layout, design, colors, or functionality.
+ONLY add mobile-specific fixes using Tailwind responsive prefixes 
+(sm:, md:) and media queries.
+
+---
+
+## FIX 1 — Navbar (MOST CRITICAL)
+
+The mobile navbar menu is broken — it overlaps content and never closes.
+
+In src/components/layout/Navbar.tsx, implement a proper mobile nav:
+
+### State
+Add this state at the top of the Navbar component:
+  const [isOpen, setIsOpen] = useState(false);
+
+### Hamburger button
+On mobile, show a hamburger/close toggle button:
+  <button
+    className="md:hidden flex flex-col gap-1.5 p-2 z-50 relative"
+    onClick={() => setIsOpen(!isOpen)}
+    aria-label="Toggle menu"
+  >
+    {isOpen ? (
+      <X size={24} className="text-foreground" />
+    ) : (
+      <>
+        <span className="w-6 h-px bg-foreground block" />
+        <span className="w-6 h-px bg-primary block" />
+        <span className="w-4 h-px bg-foreground block" />
+      </>
+    )}
+  </button>
+
+### Desktop nav links
+Wrap existing nav links so they ONLY show on md and above:
+  <nav className="hidden md:flex items-center gap-8">
+    {/* existing nav links */}
+  </nav>
+  <div className="hidden md:block">
+    {/* existing BOOK NOW button */}
+  </div>
+
+### Mobile dropdown menu
+Add a full-screen mobile menu overlay BELOW the navbar bar:
+  {isOpen && (
+    <div className="fixed inset-0 top-[64px] bg-background z-40 flex flex-col 
+                    items-center justify-center gap-10 md:hidden">
+      {["Home", "Services", "Team", "Gallery", "Contact"].map((item) => (
+        <Link
+          key={item}
+          href={item === "Home" ? "/" : `/${item.toLowerCase()}`}
+          onClick={() => setIsOpen(false)}
+          className="text-3xl font-serif text-foreground hover:text-primary 
+                     transition-colors"
+        >
+          {item}
+        </Link>
+      ))}
+      <Link
+        href="/book"
+        onClick={() => setIsOpen(false)}
+        className="ghost-btn-gold px-10 py-4 text-lg mt-4"
+      >
+        Book Appointment
+      </Link>
+    </div>
+  )}
+
+### Close menu on route change
+Add this effect:
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location]);
+
+### Prevent body scroll when menu open
+Add this effect:
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
+
+---
+
+## FIX 2 — Admin Dashboard Sidebar (CRITICAL)
+
+The sidebar permanently occupies 60% of screen on mobile — unusable.
+
+In src/components/layout/AdminSidebar.tsx (or wherever the admin 
+layout is defined):
+
+### Add toggle state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+### Mobile hamburger in admin header
+Add a hamburger button that only shows on mobile (top of content area):
+  <button
+    className="md:hidden fixed top-4 left-4 z-50 p-2 bg-card border 
+               border-border"
+    onClick={() => setSidebarOpen(!sidebarOpen)}
+  >
+    {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+  </button>
+
+### Sidebar behavior
+  - On desktop (md+): sidebar always visible, fixed width 240px
+  - On mobile: sidebar hidden by default, slides in as overlay when toggled
+
+  <aside className={`
+    fixed inset-y-0 left-0 z-40 w-60 bg-card border-r border-border
+    flex flex-col transition-transform duration-300
+    ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+    md:translate-x-0
+  `}>
+    {/* existing sidebar content */}
+  </aside>
+
+### Overlay backdrop when sidebar open on mobile
+  {sidebarOpen && (
+    <div
+      className="fixed inset-0 bg-black/60 z-30 md:hidden"
+      onClick={() => setSidebarOpen(false)}
+    />
+  )}
+
+### Main content area
+  <main className="md:ml-60 min-h-screen p-4 md:p-8 pt-16 md:pt-8">
+    {/* page content */}
+  </main>
+
+### Close sidebar when nav item clicked on mobile
+On every sidebar nav link, add: onClick={() => setSidebarOpen(false)}
+
+---
+
+## FIX 3 — Admin Dashboard Stat Cards
+
+On mobile, stat cards are stacking in 1 column taking forever to scroll.
+Change the grid to 2 columns on mobile:
+
+  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    {/* stat cards */}
+  </div>
+
+Each stat card: reduce padding on mobile:
+  <div className="bg-card border border-border p-4 md:p-8">
+
+Stat number font size on mobile:
+  <div className="text-3xl md:text-5xl font-sans font-light mt-2">
+
+---
+
+## FIX 4 — Bookings Table Mobile
+
+The table is completely cut off on mobile. Wrap it in a horizontal 
+scroll container:
+
+  <div className="w-full overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+    <table className="min-w-[700px] w-full">
+      {/* existing table content unchanged */}
+    </table>
+  </div>
+
+Also add a subtle hint text above the table on mobile only:
+  <p className="text-xs text-muted-foreground mb-2 md:hidden">
+    ← Scroll to see all columns
+  </p>
+
+---
+
+## FIX 5 — Hero Section Mobile
+
+The hero heading is too large on small screens and gets cut off:
+
+  <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-serif ...">
+
+Eyebrow text wrapping fix:
+  <p className="font-mono uppercase mb-4 tracking-[0.15em] md:tracking-[0.25em] 
+                text-center px-4">
+
+---
+
+## FIX 6 — Services Section Mobile
+
+The horizontal scroll service cards on mobile need touch scroll hints:
+
+Add to the scroll container:
+  style={{ 
+    scrollSnapType: "x mandatory",
+    WebkitOverflowScrolling: "touch",
+    maskImage: "linear-gradient(to right, black 80%, transparent 100%)",
+    WebkitMaskImage: "linear-gradient(to right, black 80%, transparent 100%)"
+  }}
+
+Each card min-width on mobile:
+  className="min-w-[85vw] md:min-w-[340px]"
+
+---
+
+## FIX 7 — Gallery Strip Mobile
+
+Gallery images on mobile are too tall:
+  className="min-w-[85vw] md:min-w-[400px] h-[300px] md:h-[500px] ..."
+
+---
+
+## FIX 8 — Footer Mobile
+
+Footer 4-column grid should stack on mobile:
+  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12"
+
+---
+
+## RULES
+1. DO NOT change any desktop styles (md: and above must remain identical)
+2. DO NOT change any colors, fonts, or design tokens
+3. DO NOT change any data fetching or business logic
+4. DO NOT change any admin CRUD functionality
+5. Test every fix at 390px width (iPhone 14 viewport)
+6. After all fixes, run: npm run build — must pass with zero errors
+7. The mobile menu must close when: a link is tapped, back button pressed,
+   or anywhere outside is tapped
+8. The admin sidebar must close when: a nav item is tapped or the 
+   backdrop overlay is tapped

@@ -1,17 +1,26 @@
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { X } from "lucide-react";
 
 export function Navbar() {
   const [location] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location]);
+
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -75,42 +84,46 @@ export function Navbar() {
           </Link>
         </nav>
 
-        {/* Mobile Toggle */}
+        {/* Mobile Hamburger */}
         <button
-          className="md:hidden text-foreground z-50"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden flex flex-col gap-1.5 p-2 z-50 relative"
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label="Toggle menu"
         >
-          {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+          {isOpen ? (
+            <X size={24} className="text-foreground" />
+          ) : (
+            <>
+              <span className="w-6 h-px bg-foreground block" />
+              <span className="w-6 h-px bg-primary block" />
+              <span className="w-4 h-px bg-foreground block" />
+            </>
+          )}
         </button>
+      </div>
 
-        {/* Mobile Nav */}
-        <div
-          className={`fixed inset-0 bg-background flex flex-col items-center justify-center gap-8 transition-transform duration-500 ease-in-out z-40 md:hidden ${
-            mobileMenuOpen ? "translate-y-0" : "-translate-y-full"
-          }`}
-        >
-          {navLinks.map((link) => (
+      {/* Mobile Fullscreen Menu */}
+      {isOpen && (
+        <div className="fixed inset-0 top-[64px] bg-background z-40 flex flex-col items-center justify-center gap-10 md:hidden">
+          {navLinks.map((item) => (
             <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className={`text-2xl font-serif tracking-widest ${
-                location === link.href ? "text-primary" : "text-foreground"
-              }`}
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsOpen(false)}
+              className="text-3xl font-serif text-foreground hover:text-primary transition-colors"
             >
-              {link.label}
+              {item.label}
             </Link>
           ))}
           <Link
             href="/book"
-            onClick={() => setMobileMenuOpen(false)}
-            className="font-mono text-sm uppercase tracking-widest mt-4"
-            style={{ border: "1px solid #C9A96E", color: "#C9A96E", padding: "12px 32px" }}
+            onClick={() => setIsOpen(false)}
+            className="ghost-btn-gold px-10 py-4 text-lg mt-4"
           >
-            Book Now
+            Book Appointment
           </Link>
         </div>
-      </div>
+      )}
     </header>
   );
 }

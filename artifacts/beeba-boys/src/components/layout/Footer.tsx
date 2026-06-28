@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="bg-card border-t border-border pt-20 pb-10">
       <div className="container mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12 mb-16">
           <div className="col-span-1">
             <Link href="/" className="text-2xl font-serif font-bold tracking-widest text-primary block mb-6">
               BEEBA BOYS
