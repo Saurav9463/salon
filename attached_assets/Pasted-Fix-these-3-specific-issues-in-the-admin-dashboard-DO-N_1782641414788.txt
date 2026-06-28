@@ -1,0 +1,262 @@
+Fix these 3 specific issues in the admin dashboard.
+DO NOT change any design, colors, or other pages.
+
+---
+
+## FIX 1 — Admin page horizontal overflow / scroll
+
+The entire admin content area has a horizontal scrollbar and 
+cards are being cut off on the right side.
+
+Root cause: the 3-column grid for services/team is overflowing 
+the content area because the sidebar + grid total width exceeds 
+the viewport.
+
+In the admin Services page and any other admin page with a 
+3-column grid:
+
+Change the grid from:
+  grid-cols-3
+To:
+  grid-cols-1 md:grid-cols-2 xl:grid-cols-3
+
+Also wrap the entire admin content/main area with:
+  className="w-full min-w-0 overflow-x-hidden"
+
+And on the admin layout root container, add:
+  style={{ maxWidth: "100%", overflowX: "hidden" }}
+
+Also check if any container has a fixed width or min-width 
+that could cause overflow and remove it.
+
+---
+
+## FIX 2 — Add Edit button to Service cards
+
+Each service card currently only has a Delete button.
+Add an Edit button that opens an edit modal/form.
+
+### Step A — Add Edit button to each card
+Next to the existing Delete button on each service card, add:
+
+  <button
+    onClick={() => handleEdit(service)}
+    className="text-xs font-mono tracking-widest uppercase 
+               border border-primary text-primary px-3 py-1 
+               hover:bg-primary hover:text-background 
+               transition-colors"
+  >
+    Edit
+  </button>
+
+### Step B — Add edit state
+  const [editingService, setEditingService] = useState(null);
+
+  const handleEdit = (service) => {
+    setEditingService(service);
+  };
+
+### Step C — Add Edit Modal
+When editingService is not null, show a modal overlay:
+
+  {editingService && (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center 
+                    justify-center p-4">
+      <div className="bg-card border border-border w-full max-w-lg p-8">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-serif">Edit Service</h2>
+          <button onClick={() => setEditingService(null)}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-mono uppercase tracking-widest 
+                               text-muted-foreground mb-2 block">
+              Service Name
+            </label>
+            <input
+              className="w-full bg-background border border-border px-4 py-3 
+                         text-foreground focus:border-primary outline-none"
+              value={editingService.name}
+              onChange={(e) => setEditingService({
+                ...editingService, name: e.target.value
+              })}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-mono uppercase tracking-widest 
+                               text-muted-foreground mb-2 block">
+              Category
+            </label>
+            <select
+              className="w-full bg-background border border-border px-4 py-3 
+                         text-foreground focus:border-primary outline-none"
+              value={editingService.category}
+              onChange={(e) => setEditingService({
+                ...editingService, category: e.target.value
+              })}
+            >
+              <option value="HAIR">HAIR</option>
+              <option value="BEARD">BEARD</option>
+              <option value="SKIN">SKIN</option>
+              <option value="SPA">SPA</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-mono uppercase tracking-widest 
+                               text-muted-foreground mb-2 block">
+              Description
+            </label>
+            <textarea
+              className="w-full bg-background border border-border px-4 py-3 
+                         text-foreground focus:border-primary outline-none 
+                         resize-none h-20"
+              value={editingService.description}
+              onChange={(e) => setEditingService({
+                ...editingService, description: e.target.value
+              })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-mono uppercase tracking-widest 
+                                 text-muted-foreground mb-2 block">
+                Price (₹)
+              </label>
+              <input
+                type="number"
+                className="w-full bg-background border border-border px-4 py-3 
+                           text-foreground focus:border-primary outline-none"
+                value={editingService.price}
+                onChange={(e) => setEditingService({
+                  ...editingService, price: Number(e.target.value)
+                })}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono uppercase tracking-widest 
+                                 text-muted-foreground mb-2 block">
+                Duration (min)
+              </label>
+              <input
+                type="number"
+                className="w-full bg-background border border-border px-4 py-3 
+                           text-foreground focus:border-primary outline-none"
+                value={editingService.duration_minutes}
+                onChange={(e) => setEditingService({
+                  ...editingService, duration_minutes: Number(e.target.value)
+                })}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mt-2">
+            <input
+              type="checkbox"
+              id="active"
+              checked={editingService.active}
+              onChange={(e) => setEditingService({
+                ...editingService, active: e.target.checked
+              })}
+              className="accent-primary"
+            />
+            <label htmlFor="active" 
+                   className="text-sm font-mono uppercase tracking-widest">
+              Active (visible on public site)
+            </label>
+          </div>
+        </div>
+
+        <div className="flex gap-4 mt-8">
+          <button
+            onClick={handleSaveEdit}
+            className="flex-1 bg-primary text-background font-mono 
+                       uppercase tracking-widest py-3 hover:opacity-90 
+                       transition-opacity"
+          >
+            Save Changes
+          </button>
+          <button
+            onClick={() => setEditingService(null)}
+            className="flex-1 border border-border font-mono uppercase 
+                       tracking-widest py-3 hover:border-primary 
+                       transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+### Step D — Save edit to Supabase
+  const handleSaveEdit = async () => {
+    const { error } = await supabase
+      .from("services")
+      .update({
+        name: editingService.name,
+        category: editingService.category,
+        description: editingService.description,
+        price: editingService.price,
+        duration_minutes: editingService.duration_minutes,
+        active: editingService.active,
+      })
+      .eq("id", editingService.id);
+
+    if (!error) {
+      setServices(services.map(s => 
+        s.id === editingService.id ? editingService : s
+      ));
+      setEditingService(null);
+    } else {
+      console.error("Update error:", error);
+      alert("Failed to save changes. Please try again.");
+    }
+  };
+
+---
+
+## FIX 3 — Bookings table showing "—" for Service and Stylist
+
+The booking exists but Service and Stylist columns show "—".
+This means the foreign key join is not resolving correctly.
+
+In the admin Bookings page, the fetch query must use explicit 
+foreign key hints because Supabase has multiple relationships:
+
+Replace the current bookings fetch with:
+
+  supabase
+    .from("bookings")
+    .select(`
+      *,
+      service:services ( name ),
+      stylist:team ( name )
+    `)
+    .order("created_at", { ascending: false })
+    .then(({ data, error }) => {
+      if (error) console.error("Bookings error:", error);
+      setBookings(data ?? []);
+    });
+
+Then in the table row, display:
+  Service column:  {booking.service?.name ?? "—"}
+  Stylist column:  {booking.stylist?.name ?? "—"}
+
+If the old booking was made before services/team were in the DB,
+its foreign keys will be null and "—" is correct for that row.
+New bookings made now will show the correct names.
+
+---
+
+## RULES
+- DO NOT change any public site pages
+- DO NOT change design, colors, fonts
+- DO NOT change Team admin page (same Edit pattern can be 
+  added to Team in a separate task)
+- Run npm run build after — zero errors required

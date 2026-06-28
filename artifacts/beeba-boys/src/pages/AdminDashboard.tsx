@@ -91,7 +91,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main content */}
-      <main className="w-full md:ml-60 min-h-screen flex flex-col transition-all duration-300">
+      <main className="w-full min-w-0 overflow-x-hidden md:ml-60 min-h-screen flex flex-col transition-all duration-300">
         <header className="h-16 border-b border-border bg-card/50 flex items-center px-4 md:px-8 gap-4">
           <button
             className="md:hidden p-2 text-foreground z-50"
@@ -200,7 +200,7 @@ function BookingsTab() {
   const fetchBookings = async () => {
     supabase
       .from("bookings")
-      .select(`*, services ( name ), team!stylist_id ( name )`)
+      .select(`*, service:services ( name ), stylist:team ( name )`)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.error("Bookings error:", error);
@@ -246,8 +246,8 @@ function BookingsTab() {
                   <div className="font-serif text-base">{booking.client_name}</div>
                   <div className="text-muted-foreground text-xs">{booking.client_phone}</div>
                 </td>
-                <td className="px-6 py-4">{booking.services?.name || '-'}</td>
-                <td className="px-6 py-4">{booking.team?.name || '-'}</td>
+                <td className="px-6 py-4">{booking.service?.name ?? '—'}</td>
+                <td className="px-6 py-4">{booking.stylist?.name ?? '—'}</td>
                 <td className="px-6 py-4 font-mono text-xs">
                   {booking.appointment_date} <br /> {booking.appointment_time}
                 </td>
@@ -431,6 +431,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function ServicesTab() {
   const [services, setServices] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingService, setEditingService] = useState<any>(null);
 
   const fetchServices = async () => {
     supabase
@@ -453,20 +454,134 @@ function ServicesTab() {
     }
   };
 
+  const handleEdit = (service: any) => setEditingService(service);
+
+  const handleSaveEdit = async () => {
+    const { error } = await supabase
+      .from("services")
+      .update({
+        name: editingService.name,
+        category: editingService.category,
+        description: editingService.description,
+        price: editingService.price,
+        duration_minutes: editingService.duration_minutes,
+        active: editingService.active,
+      })
+      .eq("id", editingService.id);
+    if (!error) {
+      setServices(services.map(s => s.id === editingService.id ? editingService : s));
+      setEditingService(null);
+    } else {
+      console.error("Update error:", error);
+      alert("Failed to save changes. Please try again.");
+    }
+  };
+
   return (
-    <div>
+    <div className="min-w-0">
       {showAdd && (
         <AddServiceModal
           onClose={() => setShowAdd(false)}
           onSuccess={fetchServices}
         />
       )}
+
+      {editingService && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border w-full max-w-lg p-8">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-serif">Edit Service</h2>
+              <button onClick={() => setEditingService(null)} className="text-muted-foreground hover:text-foreground">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Service Name</label>
+                <input
+                  className="w-full bg-background border border-border px-4 py-3 text-foreground focus:border-primary outline-none"
+                  value={editingService.name}
+                  onChange={e => setEditingService({ ...editingService, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Category</label>
+                <select
+                  className="w-full bg-background border border-border px-4 py-3 text-foreground focus:border-primary outline-none"
+                  value={editingService.category}
+                  onChange={e => setEditingService({ ...editingService, category: e.target.value })}
+                >
+                  <option value="Hair">Hair</option>
+                  <option value="Beard">Beard</option>
+                  <option value="Skin">Skin</option>
+                  <option value="Spa & Wellness">Spa & Wellness</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Description</label>
+                <textarea
+                  className="w-full bg-background border border-border px-4 py-3 text-foreground focus:border-primary outline-none resize-none h-20"
+                  value={editingService.description ?? ""}
+                  onChange={e => setEditingService({ ...editingService, description: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Price (₹)</label>
+                  <input
+                    type="number"
+                    className="w-full bg-background border border-border px-4 py-3 text-foreground focus:border-primary outline-none"
+                    value={editingService.price}
+                    onChange={e => setEditingService({ ...editingService, price: Number(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 block">Duration (min)</label>
+                  <input
+                    type="number"
+                    className="w-full bg-background border border-border px-4 py-3 text-foreground focus:border-primary outline-none"
+                    value={editingService.duration_minutes}
+                    onChange={e => setEditingService({ ...editingService, duration_minutes: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 mt-2">
+                <input
+                  type="checkbox"
+                  id="svc-active"
+                  checked={editingService.active}
+                  onChange={e => setEditingService({ ...editingService, active: e.target.checked })}
+                  className="accent-primary"
+                />
+                <label htmlFor="svc-active" className="text-sm font-mono uppercase tracking-widest">
+                  Active (visible on public site)
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-4 mt-8">
+              <button
+                onClick={handleSaveEdit}
+                className="flex-1 bg-primary text-background font-mono uppercase tracking-widest py-3 hover:opacity-90 transition-opacity"
+              >
+                Save Changes
+              </button>
+              <button
+                onClick={() => setEditingService(null)}
+                className="flex-1 border border-border font-mono uppercase tracking-widest py-3 hover:border-primary transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 flex justify-end">
         <button onClick={() => setShowAdd(true)} className="bg-primary text-primary-foreground px-6 py-3 font-mono text-sm uppercase tracking-widest hover:bg-primary/90 transition-colors">
           + Add Service
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {services.map(s => (
           <div key={s.id} className="bg-card border border-border p-6 relative group">
             <div className="text-xs text-primary font-mono uppercase mb-2">{s.category}</div>
@@ -474,7 +589,13 @@ function ServicesTab() {
             <div className="text-muted-foreground text-sm mb-2">₹{s.price} · {s.duration_minutes} min</div>
             {!s.active && <div className="text-xs font-mono text-muted-foreground mb-2 uppercase">[Inactive]</div>}
             {s.description && <p className="text-muted-foreground text-xs">{s.description}</p>}
-            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => handleEdit(s)}
+                className="text-xs font-mono tracking-widest uppercase border border-primary text-primary px-3 py-1 hover:bg-primary hover:text-background transition-colors"
+              >
+                Edit
+              </button>
               <button onClick={() => handleDelete(s.id)} className="text-destructive text-xs font-mono border border-destructive/50 px-2 py-1">Delete</button>
             </div>
           </div>
@@ -523,7 +644,7 @@ function TeamTab() {
           + Add Member
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {team.map(m => (
           <div key={m.id} className="bg-card border border-border p-6 relative group flex items-center gap-4">
             <div className="w-16 h-16 bg-muted rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-border">
