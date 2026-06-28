@@ -30,7 +30,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -130,8 +130,8 @@ function DashboardStatsTab() {
         { data: allTeam, error: e6 },
       ] = await Promise.all([
         supabase.from("bookings").select("id"),
-        supabase.from("bookings").select("id").eq("status", "Pending"),
-        supabase.from("bookings").select("id").eq("status", "Confirmed"),
+        supabase.from("bookings").select("id").ilike("status", "pending"),
+        supabase.from("bookings").select("id").ilike("status", "confirmed"),
         supabase.from("messages").select("id").eq("read", false),
         supabase.from("services").select("id").eq("active", true),
         supabase.from("team").select("id").eq("active", true),
@@ -221,8 +221,8 @@ function BookingsTab() {
   return (
     <div>
       <p className="text-xs text-muted-foreground mb-2 md:hidden">← Scroll to see all columns</p>
-      <div className="w-full overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-        <table className="min-w-[700px] w-full text-sm text-left bg-card border border-border">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full min-w-[600px] text-sm text-left bg-card border border-border">
           <thead className="text-xs font-mono uppercase tracking-widest text-muted-foreground border-b border-border bg-muted/20">
             <tr>
               <th className="px-6 py-4">Client</th>
@@ -263,14 +263,14 @@ function BookingsTab() {
                 </td>
                 <td className="px-6 py-4">
                   <select
-                    value={booking.status?.toLowerCase()}
+                    value={booking.status}
                     onChange={(e) => handleStatusChange(booking.id, e.target.value)}
                     className="bg-background border border-border text-xs p-1 text-foreground"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="completed">Completed</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Confirmed">Confirmed</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Completed">Completed</option>
                   </select>
                 </td>
               </tr>
