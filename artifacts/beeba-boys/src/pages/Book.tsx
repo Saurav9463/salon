@@ -55,14 +55,19 @@ export default function Book() {
   const activeStylist = team.find(s => s.id === stylistId);
   const primaryService = selectedServices[0];
 
+  const isUUID = (id: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
   const handleBook = async () => {
     setIsBooking(true);
+    const serviceId = primaryService?.id && isUUID(primaryService.id) ? primaryService.id : undefined;
+    const stylistIdValue = stylistId && isUUID(stylistId) ? stylistId : undefined;
     const { error } = await supabase.from("bookings").insert([{
       client_name: details.client_name,
       client_email: details.client_email || undefined,
       client_phone: details.client_phone,
-      service_id: primaryService?.id,
-      stylist_id: stylistId || undefined,
+      service_id: serviceId,
+      stylist_id: stylistIdValue,
       appointment_date: date,
       appointment_time: time,
       status: "Pending",
