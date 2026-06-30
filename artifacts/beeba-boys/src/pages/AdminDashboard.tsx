@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { useLocation } from "wouter";
 import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -282,6 +282,14 @@ function BookingsTab() {
               ))}
             </div>
 
+            {/* Notes — shows multi-barber / multi-service info if present */}
+            {b.notes && (
+              <div style={{borderTop:"1px solid #1E1E1E",paddingTop:12}}>
+                <div style={{fontSize:10,fontFamily:"DM Mono",textTransform:"uppercase",color:"#6B6560",marginBottom:4,letterSpacing:"0.1em"}}>Notes</div>
+                <div style={{fontSize:13,color:"#C9A96E",lineHeight:1.5}}>{b.notes}</div>
+              </div>
+            )}
+
             {/* Status dropdown */}
             <div>
               <div style={{fontSize:10,fontFamily:"DM Mono",textTransform:"uppercase",color:"#6B6560",marginBottom:8,letterSpacing:"0.1em"}}>Update Status</div>
@@ -315,34 +323,47 @@ function BookingsTab() {
           </thead>
           <tbody>
             {bookings.map((booking, idx) => (
-              <tr key={booking.id} className="border-b border-border"
-                style={{ background: idx % 2 === 1 ? "#0D0D0D" : "transparent" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#141414")}
-                onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 1 ? "#0D0D0D" : "transparent")}
-              >
-                <td className="px-3 py-3">
-                  <div className="font-medium text-sm truncate">{booking.client_name}</div>
-                  <div className="text-xs text-muted-foreground">{booking.client_phone}</div>
-                </td>
-                <td className="px-3 py-3 truncate">{booking.service?.name ?? "—"}</td>
-                <td className="px-3 py-3 truncate">{booking.stylist?.name ?? "—"}</td>
-                <td className="px-3 py-3 font-mono text-xs">
-                  {booking.appointment_date ? formatDate(booking.appointment_date) : "—"}<br/>
-                  {booking.appointment_time ? formatTime(booking.appointment_time) : ""}
-                </td>
-                <td className="px-3 py-3">
-                  <span className={`px-2 py-1 text-xs font-mono uppercase border ${statusClass(booking.status)}`}>{booking.status}</span>
-                </td>
-                <td className="px-3 py-3">
-                  <select value={booking.status} onChange={e => handleStatusChange(booking.id, e.target.value)}
-                    className="w-full max-w-[130px] bg-background border border-border text-foreground text-sm px-2 py-1 outline-none focus:border-primary">
-                    <option value="Pending">Pending</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Cancelled">Cancelled</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </td>
-              </tr>
+              <Fragment key={booking.id}>
+                <tr className={booking.notes ? "" : "border-b border-border"}
+                  style={{ background: idx % 2 === 1 ? "#0D0D0D" : "transparent" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#141414")}
+                  onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 1 ? "#0D0D0D" : "transparent")}
+                >
+                  <td className="px-3 py-3">
+                    <div className="font-medium text-sm truncate">{booking.client_name}</div>
+                    <div className="text-xs text-muted-foreground">{booking.client_phone}</div>
+                  </td>
+                  <td className="px-3 py-3 truncate">{booking.service?.name ?? "—"}</td>
+                  <td className="px-3 py-3 truncate">{booking.stylist?.name ?? "—"}</td>
+                  <td className="px-3 py-3 font-mono text-xs">
+                    {booking.appointment_date ? formatDate(booking.appointment_date) : "—"}<br/>
+                    {booking.appointment_time ? formatTime(booking.appointment_time) : ""}
+                  </td>
+                  <td className="px-3 py-3">
+                    <span className={`px-2 py-1 text-xs font-mono uppercase border ${statusClass(booking.status)}`}>{booking.status}</span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <select value={booking.status} onChange={e => handleStatusChange(booking.id, e.target.value)}
+                      className="w-full max-w-[130px] bg-background border border-border text-foreground text-sm px-2 py-1 outline-none focus:border-primary">
+                      <option value="Pending">Pending</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Cancelled">Cancelled</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </td>
+                </tr>
+                {booking.notes && (
+                  <tr key={`${booking.id}-notes`} className="border-b border-border"
+                    style={{ background: idx % 2 === 1 ? "#0D0D0D" : "transparent" }}>
+                    <td colSpan={6} className="px-3 pb-3 pt-0">
+                      <div style={{fontSize:12,color:"#C9A96E",fontFamily:"DM Mono"}}>
+                        <span style={{color:"#6B6560",textTransform:"uppercase",letterSpacing:"0.05em",marginRight:8}}>Notes:</span>
+                        {booking.notes}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
             {bookings.length === 0 && (
               <tr><td colSpan={6}>
