@@ -204,6 +204,16 @@ function StatCard({ title, value, highlight = false }: { title: string, value: n
 function BookingsTab() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const checkWidth = () => setIsMobile(window.innerWidth < 768);
+    checkWidth();
+    window.addEventListener("resize", checkWidth);
+    return () => window.removeEventListener("resize", checkWidth);
+  }, []);
 
   const fetchBookings = async () => {
     supabase
@@ -245,8 +255,9 @@ function BookingsTab() {
 
   return (
     <div>
-      {/* ===== MOBILE CARDS — only shown below md ===== */}
-      <div style={{display:"flex",flexDirection:"column",gap:16}} className="md:hidden">
+      {/* ===== MOBILE CARDS — only shown below 768px, JS-controlled ===== */}
+      {isMobile && (
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
         {bookings.length === 0 && (
           <div style={{textAlign:"center",padding:"48px 0",color:"#6B6560",fontFamily:"DM Mono",fontSize:13}}>No bookings yet</div>
         )}
@@ -308,8 +319,11 @@ function BookingsTab() {
         ))}
       </div>
 
-      {/* ===== DESKTOP TABLE — only shown at md and above ===== */}
-      <div className="hidden md:block w-full overflow-x-auto">
+      )}
+
+      {/* ===== DESKTOP TABLE — only shown at 768px and above, JS-controlled ===== */}
+      {!isMobile && (
+      <div className="w-full overflow-x-auto">
         <table className="w-full text-sm text-left bg-card border border-border table-fixed">
           <thead className="text-xs font-mono uppercase tracking-widest text-muted-foreground border-b border-border bg-muted/20">
             <tr>
@@ -376,6 +390,7 @@ function BookingsTab() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
