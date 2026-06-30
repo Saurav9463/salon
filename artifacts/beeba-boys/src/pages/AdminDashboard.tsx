@@ -47,8 +47,15 @@ export default function AdminDashboard() {
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         md:translate-x-0
       `}>
-        <div className="p-6 border-b border-border">
-          <h1 className="text-xl font-serif text-primary">BEEBA BOYS</h1>
+        <div className="p-6 border-b border-border relative">
+          <button
+            className="md:hidden absolute top-4 right-4 text-muted-foreground hover:text-foreground p-1"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <X size={20} />
+          </button>
+          <h1 className="text-xl font-serif text-primary pr-8">BEEBA BOYS</h1>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">Admin</p>
         </div>
 
@@ -94,11 +101,11 @@ export default function AdminDashboard() {
       <main className="w-full min-w-0 overflow-x-hidden md:ml-60 min-h-screen flex flex-col transition-all duration-300 max-w-[calc(100vw-0px)] md:max-w-[calc(100vw-240px)]">
         <header className="h-16 border-b border-border bg-card/50 flex items-center px-4 md:px-8 gap-4">
           <button
-            className="md:hidden p-2 text-foreground z-50"
+            className="md:hidden p-2 text-foreground"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
           >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            <Menu size={20} />
           </button>
           <h2 className="font-serif text-xl capitalize">{activeTab}</h2>
         </header>
@@ -639,26 +646,31 @@ function ServicesTab() {
           + Add Service
         </button>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div style={{display:"grid",gridTemplateColumns:"1fr",gap:16}} className="lg:grid-cols-2">
         {services.map(s => (
-          <div key={s.id} className="bg-card border border-border p-6 relative group overflow-hidden min-w-0">
-            <div className="text-xs text-primary font-mono uppercase mb-2">{s.category}</div>
-            <h3 className="font-serif text-xl mb-1 truncate">{s.name}</h3>
-            <div className="text-muted-foreground text-sm mb-2">₹{s.price} · {s.duration_minutes} min</div>
-            {!s.active && <div className="text-xs font-mono text-muted-foreground mb-2 uppercase">[Inactive]</div>}
-            {s.description && <p className="text-muted-foreground text-xs line-clamp-2">{s.description}</p>}
-            <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div key={s.id} style={{background:"#111111",border:"1px solid #1E1E1E",padding:24,display:"flex",flexDirection:"column",minWidth:0}}>
+            <div style={{fontSize:11,color:"#C9A96E",fontFamily:"DM Mono",textTransform:"uppercase",marginBottom:8,letterSpacing:"0.05em"}}>{s.category}</div>
+            <h3 style={{fontFamily:"Cormorant Garamond,serif",fontSize:20,color:"#F5F0EB",marginBottom:4}}>{s.name}</h3>
+            <div style={{color:"#6B6560",fontSize:14,marginBottom:8}}>₹{s.price} · {s.duration_minutes} min</div>
+            {!s.active && <div style={{fontSize:11,fontFamily:"DM Mono",color:"#6B6560",textTransform:"uppercase",marginBottom:8}}>[Inactive]</div>}
+            {s.description && <p style={{color:"#6B6560",fontSize:12,marginBottom:16,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{s.description}</p>}
+            <div style={{display:"flex",gap:8,marginTop:"auto",paddingTop:16}}>
               <button
                 onClick={() => handleEdit(s)}
-                className="text-xs font-mono tracking-widest uppercase border border-primary text-primary px-3 py-1 hover:bg-primary hover:text-background transition-colors"
+                style={{fontSize:11,fontFamily:"DM Mono",textTransform:"uppercase",letterSpacing:"0.05em",border:"1px solid #C9A96E",color:"#C9A96E",padding:"8px 16px",background:"none",cursor:"pointer",flexShrink:0}}
               >
                 Edit
               </button>
-              <button onClick={() => handleDelete(s.id)} className="text-destructive text-xs font-mono border border-destructive/50 px-2 py-1">Delete</button>
+              <button
+                onClick={() => handleDelete(s.id)}
+                style={{fontSize:11,fontFamily:"DM Mono",textTransform:"uppercase",letterSpacing:"0.05em",border:"1px solid rgba(239,68,68,0.4)",color:"#ef4444",padding:"8px 16px",background:"none",cursor:"pointer",flexShrink:0}}
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}
-        {services.length === 0 && <div className="col-span-3 text-center py-8 text-muted-foreground">No services yet.</div>}
+        {services.length === 0 && <div style={{textAlign:"center",padding:"32px 0",color:"#6B6560"}}>No services yet.</div>}
       </div>
     </div>
   );
