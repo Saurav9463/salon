@@ -28,7 +28,7 @@ export default function Book() {
 
   const [step, setStep] = useState(1);
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [stylistId, setStylistId] = useState("");
+  const [stylistIds, setStylistIds] = useState<string[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [details, setDetails] = useState({ client_name: "", client_email: "", client_phone: "" });
@@ -45,6 +45,12 @@ export default function Book() {
     );
   };
 
+  const toggleStylist = (id: string) => {
+    setStylistIds(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
   const selectedServices = useMemo(
     () => services.filter(s => selectedServiceIds.includes(s.id)),
     [services, selectedServiceIds]
@@ -52,7 +58,8 @@ export default function Book() {
 
   const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + Number(s.duration_minutes), 0);
-  const activeStylist = team.find(s => s.id === stylistId);
+  const selectedStylists = team.filter(s => stylistIds.includes(s.id));
+  const activeStylist = selectedStylists[0];
   const primaryService = selectedServices[0];
 
   const isUUID = (id: string) =>
@@ -61,7 +68,11 @@ export default function Book() {
   const handleBook = async () => {
     setIsBooking(true);
     const serviceId = primaryService?.id && isUUID(primaryService.id) ? primaryService.id : undefined;
-    const stylistIdValue = stylistId && isUUID(stylistId) ? stylistId : undefined;
+    const stylistIdValue = stylistIds[0] && isUUID(stylistIds[0]) ? stylistIds[0] : undefined;
+    const allServiceNames = selectedServices.map(s => s.name).join(", ");
+    const allStylistNames = selectedStylists.map(s => s.name).join(", ");
+    const bookingNotes = `Services: ${allServiceNames}${selectedStylists.length > 1 ? ` | Barbers: ${allStylistNames}` : ""}`;
+
     const { error } = await supabase.from("bookings").insert([{
       client_name: details.client_name,
       client_email: details.client_email || undefined,
@@ -71,6 +82,7 @@ export default function Book() {
       appointment_date: date,
       appointment_time: time,
       status: "Pending",
+      notes: bookingNotes,
     }]);
     setIsBooking(false);
     if (error) {
@@ -172,34 +184,53 @@ export default function Book() {
             </div>
           )}
 
-          {/* Step 2: Stylist */}
+          {/* Step 2: Stylist (multi-select) */}
           {step === 2 && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="text-2xl font-serif mb-6">Select a Barber</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {team.filter(t => t.active).map(member => (
-                  <div
-                    key={member.id}
-                    onClick={() => setStylistId(member.id)}
-                    className={`p-6 border cursor-pointer transition-colors text-center ${stylistId === member.id ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"}`}
-                  >
-                    <div className="w-20 h-20 mx-auto bg-muted rounded-full mb-4 flex items-center justify-center overflow-hidden border border-border">
-                      {member.photo_url ? (
-                        <img src={member.photo_url} className="w-full h-full object-cover" alt="" />
-                      ) : (
-                        <span className="font-serif text-2xl text-muted-foreground">{member.name.charAt(0)}</span>
-                      )}
-                    </div>
-                    <h3 className="font-serif text-xl mb-1">{member.name}</h3>
-                    <div className="text-xs text-primary font-mono tracking-widest uppercase">{member.role}</div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-serif">Select a Barber</h2>
+                <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Choose one or more</span>
               </div>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                {team.filter(t => t.active).map(member => {
+                  const selected = stylistIds.includes(member.id);
+                  return (
+                    <div
+                      key={member.id}
+                      onClick={() => toggleStylist(member.id)}
+                      className={`relative p-4 md:p-6 border cursor-pointer transition-colors text-center ${selected ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"}`}
+                    >
+                      <div className={`absolute top-3 right-3 w-5 h-5 border flex items-center justify-center transition-colors ${selected ? "border-primary bg-primary" : "border-border"}`}>
+                        {selected && <Check size={12} className="text-primary-foreground" />}
+                      </div>
+                      <div className="w-14 h-14 md:w-20 md:h-20 mx-auto bg-muted rounded-full mb-3 md:mb-4 flex items-center justify-center overflow-hidden border border-border">
+                        {member.photo_url ? (
+                          <img src={member.photo_url} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <span className="font-serif text-2xl text-muted-foreground">{member.name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <h3 className="font-serif text-base md:text-xl mb-1">{member.name}</h3>
+                      <div className="text-xs text-primary font-mono tracking-widest uppercase">{member.role}</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {stylistIds.length > 0 && (
+                <div className="bg-card border border-primary/20 p-4 mt-6 mb-2">
+                  <div className="text-sm font-mono text-muted-foreground mb-1">Selected:</div>
+                  <div className="text-sm text-foreground">
+                    {selectedStylists.map(s => s.name).join(", ")}
+                  </div>
+                </div>
+              )}
+
               <div className="mt-8 flex justify-between">
                 <button onClick={prevStep} className="text-muted-foreground hover:text-foreground font-mono uppercase tracking-widest text-sm">Back</button>
                 <button
                   onClick={nextStep}
-                  disabled={!stylistId}
+                  disabled={stylistIds.length === 0}
                   className="ghost-btn-gold px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next Step
@@ -277,8 +308,8 @@ export default function Book() {
                   ))}
                 </div>
                 <div className="flex justify-between items-center mb-2 text-sm">
-                  <span className="text-muted-foreground">Barber</span>
-                  <span className="font-serif">{activeStylist?.name}</span>
+                  <span className="text-muted-foreground">Barber{selectedStylists.length > 1 ? "s" : ""}</span>
+                  <span className="font-serif">{selectedStylists.map(s => s.name).join(", ")}</span>
                 </div>
                 <div className="flex justify-between items-center mb-4 text-sm">
                   <span className="text-muted-foreground">When</span>
