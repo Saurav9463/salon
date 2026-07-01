@@ -1,7 +1,8 @@
 import { useEffect, useState, Fragment } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu } from "lucide-react";
+import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu, Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { uploadImage } from "@/lib/uploadImage";
 
 export default function AdminDashboard() {
   const [location, setLocation] = useLocation();
@@ -230,7 +231,11 @@ function BookingsTab() {
   useEffect(() => { fetchBookings(); }, []);
 
   const handleStatusChange = async (id: string, status: string) => {
-    await supabase.from("bookings").update({ status }).eq("id", id);
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) {
+      console.error("Status update error:", error);
+      alert("Failed to update status. This is usually a Supabase permissions (RLS) issue — check that an UPDATE policy exists on the bookings table for authenticated users.");
+    }
     fetchBookings();
   };
 
@@ -505,8 +510,8 @@ function AddMemberModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
           <Field label="Bio">
             <textarea value={form.bio} onChange={e => setForm({...form, bio: e.target.value})} className="admin-input resize-none" rows={3} />
           </Field>
-          <Field label="Photo URL (optional)">
-            <input type="url" value={form.photo_url} onChange={e => setForm({...form, photo_url: e.target.value})} className="admin-input" placeholder="https://..." />
+          <Field label="Photo (optional)">
+            <PhotoUploadField value={form.photo_url} onChange={url => setForm({ ...form, photo_url: url })} folder="team" />
           </Field>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-border py-3 font-mono text-sm text-muted-foreground hover:text-foreground">Cancel</button>
@@ -525,6 +530,66 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label className="block text-xs font-mono tracking-widest uppercase text-muted-foreground mb-1">{label}</label>
       {children}
+    </div>
+  );
+}
+
+// Reusable "upload a photo from device" control — replaces the old
+// paste-a-URL text field. Uploads to Supabase Storage and calls
+// onChange with the resulting public URL once done.
+function PhotoUploadField({ value, onChange, folder = "team" }: { value: string; onChange: (url: string) => void; folder?: string }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+    setIsUploading(true);
+    try {
+      const url = await uploadImage(file, folder);
+      onChange(url);
+    } catch (err: any) {
+      console.error("Image upload error:", err);
+      setUploadError("Upload failed. Make sure a public 'media' storage bucket exists in Supabase.");
+    } finally {
+      setIsUploading(false);
+      e.target.value = ""; // allow re-selecting the same file later
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted flex items-center justify-center shrink-0">
+          {value ? (
+            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+          ) : (
+            <Upload size={18} className="text-muted-foreground" />
+          )}
+        </div>
+        <label className="flex-1 cursor-pointer">
+          <div className="admin-input flex items-center justify-center gap-2 text-center hover:border-primary transition-colors">
+            {isUploading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Uploading...
+              </>
+            ) : (
+              <>
+                <Upload size={14} /> {value ? "Change Photo" : "Upload Photo"}
+              </>
+            )}
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            disabled={isUploading}
+            className="hidden"
+          />
+        </label>
+      </div>
+      {uploadError && <p className="text-xs text-destructive mt-2">{uploadError}</p>}
     </div>
   );
 }
@@ -768,7 +833,6 @@ function TeamTab() {
               {label:"Name", key:"name", type:"text"},
               {label:"Speciality", key:"speciality", type:"text", placeholder:"e.g. Fades & Beard Design"},
               {label:"Years Experience", key:"years_experience", type:"number"},
-              {label:"Photo URL", key:"photo_url", type:"url", placeholder:"https://..."},
             ].map(({label,key,type,placeholder}) => (
               <div key={key} style={{marginBottom:16}}>
                 <div style={{fontSize:10,fontFamily:"DM Mono",textTransform:"uppercase",letterSpacing:"0.1em",color:"#6B6560",marginBottom:6}}>{label}</div>
@@ -778,6 +842,15 @@ function TeamTab() {
                 />
               </div>
             ))}
+
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:10,fontFamily:"DM Mono",textTransform:"uppercase",letterSpacing:"0.1em",color:"#6B6560",marginBottom:6}}>Photo</div>
+              <PhotoUploadField
+                value={editingMember.photo_url ?? ""}
+                onChange={url => setEditingMember({...editingMember, photo_url: url})}
+                folder="team"
+              />
+            </div>
 
             <div style={{marginBottom:16}}>
               <div style={{fontSize:10,fontFamily:"DM Mono",textTransform:"uppercase",letterSpacing:"0.1em",color:"#6B6560",marginBottom:6}}>Role</div>
