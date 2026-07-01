@@ -1,7 +1,20 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Scrolls the window to the top whenever the route changes.
+// wouter (unlike some routers) does not reset scroll position on navigation,
+// so without this, clicking "Book Now" etc. keeps whatever scroll position
+// you were at on the previous page, making it look like nothing happened.
+function ScrollToTop() {
+  const [pathname] = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [pathname]);
+  return null;
+}
 
 import Home from "@/pages/Home";
 import Services from "@/pages/Services";
@@ -42,6 +55,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <ScrollToTop />
           <Router />
         </WouterRouter>
         <Toaster />
