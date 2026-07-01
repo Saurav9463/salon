@@ -1,6 +1,20 @@
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, useMemo, Fragment } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu, Upload, Loader2 } from "lucide-react";
+import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu, Upload, Loader2, TrendingUp } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+} from "recharts";
 import { supabase } from "@/lib/supabase";
 import { uploadImage } from "@/lib/uploadImage";
 
@@ -172,18 +186,208 @@ function DashboardStatsTab() {
   );
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      <StatCard title="Total Bookings" value={stats?.totalBookings ?? 0} />
-      <StatCard title="Pending" value={stats?.pending ?? 0} highlight={(stats?.pending ?? 0) > 0} />
-      <StatCard title="Confirmed" value={stats?.confirmed ?? 0} />
-      <StatCard title="Unread Messages" value={stats?.unreadMessages ?? 0} highlight={(stats?.unreadMessages ?? 0) > 0} />
-      <StatCard title="Total Services" value={stats?.totalServices ?? 0} />
-      <StatCard title="Team Members" value={stats?.teamMembers ?? 0} />
+    <div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <StatCard title="Total Bookings" value={stats?.totalBookings ?? 0} />
+        <StatCard title="Pending" value={stats?.pending ?? 0} highlight={(stats?.pending ?? 0) > 0} />
+        <StatCard title="Confirmed" value={stats?.confirmed ?? 0} />
+        <StatCard title="Unread Messages" value={stats?.unreadMessages ?? 0} highlight={(stats?.unreadMessages ?? 0) > 0} />
+        <StatCard title="Total Services" value={stats?.totalServices ?? 0} />
+        <StatCard title="Team Members" value={stats?.teamMembers ?? 0} />
+      </div>
+
+      <AnalyticsSection />
     </div>
   );
 }
 
-function StatCard({ title, value, highlight = false }: { title: string, value: number, highlight?: boolean }) {
+// ===== Analytics =====
+// Pulls the raw bookings (joined with service price/category) once and
+// derives every chart/metric from that single dataset client-side.
+const CHART_COLORS = ["#C9A96E", "#8B7355", "#5C7C6E", "#7A6C5D", "#4A5568", "#9B8B7A"];
+const STATUS_COLORS: Record<string, string> = {
+  pending: "#eab308",
+  confirmed: "#22c55e",
+  completed: "#60a5fa",
+  cancelled: "#ef4444",
+};
+
+function AnalyticsSection() {
+  const [rows, setRows] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    supabase
+      .from("bookings")
+      .select("id, status, created_at, appointment_date, service:services ( name, category, price )")
+      .then(({ data, error }) => {
+        if (error) { console.error("Analytics fetch error:", error); setRows([]); return; }
+        setRows(data ?? []);
+      });
+  }, []);
+
+  const metrics = useMemo(() => {
+    if (!rows) return null;
+
+    // Revenue = sum of service price for bookings that were confirmed/completed
+    const revenueRows = rows.filter(r => ["confirmed", "completed"].includes((r.status ?? "").toLowerCase()));
+    const totalRevenue = revenueRows.reduce((sum, r) => sum + (Number(r.service?.price) || 0), 0);
+    const avgTicket = revenueRows.length ? totalRevenue / revenueRows.length : 0;
+
+    const completedCount = rows.filter(r => (r.status ?? "").toLowerCase() === "completed").length;
+    const cancelledCount = rows.filter(r => (r.status ?? "").toLowerCase() === "cancelled").length;
+    const conversionRate = rows.length ? Math.round(((rows.length - cancelledCount) / rows.length) * 100) : 0;
+
+    // Bookings created per day, last 14 days
+    const days: { date: string; label: string; count: number }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({ date: key, label: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }), count: 0 });
+    }
+    rows.forEach(r => {
+      const key = r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : null;
+      const bucket = days.find(d => d.date === key);
+      if (bucket) bucket.count += 1;
+    });
+
+    // Status breakdown
+    const statusCounts: Record<string, number> = {};
+    rows.forEach(r => {
+      const s = (r.status ?? "unknown").toLowerCase();
+      statusCounts[s] = (statusCounts[s] ?? 0) + 1;
+    });
+    const statusData = Object.entries(statusCounts).map(([status, value]) => ({
+      name: status.charAt(0).toUpperCase() + status.slice(1),
+      value,
+      color: STATUS_COLORS[status] ?? "#6B6560",
+    }));
+
+    // Top services by booking count
+    const serviceCounts: Record<string, number> = {};
+    rows.forEach(r => {
+      const name = r.service?.name ?? "Unassigned";
+      serviceCounts[name] = (serviceCounts[name] ?? 0) + 1;
+    });
+    const topServices = Object.entries(serviceCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return { totalRevenue, avgTicket, conversionRate, completedCount, days, statusData, topServices };
+  }, [rows]);
+
+  if (!rows || !metrics) {
+    return (
+      <div className="mt-10">
+        <h3 className="font-serif text-2xl mb-4">Analytics</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-64 border border-border bg-card animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-10">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp size={18} className="text-primary" />
+        <h3 className="font-serif text-2xl">Analytics</h3>
+      </div>
+
+      {/* Revenue-style summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <StatCard title="Est. Revenue" value={`₹${metrics.totalRevenue.toLocaleString("en-IN")}`} />
+        <StatCard title="Avg. Ticket Value" value={`₹${Math.round(metrics.avgTicket).toLocaleString("en-IN")}`} />
+        <StatCard title="Completion Rate" value={`${metrics.conversionRate}%`} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Bookings trend */}
+        <div className="lg:col-span-2 p-4 md:p-6 border border-border bg-card min-w-0">
+          <h4 className="text-xs font-mono tracking-widest text-muted-foreground uppercase mb-4">Bookings — Last 14 Days</h4>
+          <div style={{ width: "100%", height: 220 }}>
+            <ResponsiveContainer>
+              <AreaChart data={metrics.days} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="bookingsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#C9A96E" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#C9A96E" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E1E1E" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: "#6B6560", fontSize: 10 }} axisLine={{ stroke: "#1E1E1E" }} tickLine={false} interval={1} />
+                <YAxis allowDecimals={false} tick={{ fill: "#6B6560", fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+                <Tooltip
+                  contentStyle={{ background: "#111111", border: "1px solid #1E1E1E", fontSize: 12, color: "#F5F0EB" }}
+                  labelStyle={{ color: "#C9A96E" }}
+                />
+                <Area type="monotone" dataKey="count" name="Bookings" stroke="#C9A96E" strokeWidth={2} fill="url(#bookingsGradient)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Status breakdown */}
+        <div className="p-4 md:p-6 border border-border bg-card min-w-0">
+          <h4 className="text-xs font-mono tracking-widest text-muted-foreground uppercase mb-4">Status Breakdown</h4>
+          {metrics.statusData.length === 0 ? (
+            <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">No bookings yet</div>
+          ) : (
+            <div style={{ width: "100%", height: 220 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie data={metrics.statusData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={75} paddingAngle={2}>
+                    {metrics.statusData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} stroke="#0A0A0A" strokeWidth={2} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: "#111111", border: "1px solid #1E1E1E", fontSize: 12, color: "#F5F0EB" }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center">
+            {metrics.statusData.map((s, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
+                <span style={{ width: 8, height: 8, background: s.color, display: "inline-block" }} />
+                {s.name} ({s.value})
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top services */}
+        <div className="lg:col-span-3 p-4 md:p-6 border border-border bg-card min-w-0">
+          <h4 className="text-xs font-mono tracking-widest text-muted-foreground uppercase mb-4">Most Booked Services</h4>
+          {metrics.topServices.length === 0 ? (
+            <div className="h-[180px] flex items-center justify-center text-sm text-muted-foreground">No bookings yet</div>
+          ) : (
+            <div style={{ width: "100%", height: 200 }}>
+              <ResponsiveContainer>
+                <BarChart data={metrics.topServices} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E1E1E" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fill: "#6B6560", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fill: "#F5F0EB", fontSize: 12 }} axisLine={false} tickLine={false} width={140} />
+                  <Tooltip contentStyle={{ background: "#111111", border: "1px solid #1E1E1E", fontSize: 12, color: "#F5F0EB" }} cursor={{ fill: "rgba(201,169,110,0.06)" }} />
+                  <Bar dataKey="count" name="Bookings" radius={[0, 3, 3, 0]}>
+                    {metrics.topServices.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value, highlight = false }: { title: string, value: number | string, highlight?: boolean }) {
   return (
     <div className={`p-4 md:p-6 border ${highlight ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}>
       <h3 className="text-xs font-mono tracking-widest text-muted-foreground uppercase mb-3">{title}</h3>
