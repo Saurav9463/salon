@@ -36,6 +36,13 @@ export default function Book() {
   const nextStep = () => setStep(s => Math.min(5, s + 1));
   const prevStep = () => setStep(s => Math.max(1, s - 1));
 
+  // The wizard steps don't change the URL (still /book), so the app-level
+  // ScrollToTop (which only fires on route changes) never runs between
+  // steps. Reset scroll here instead, every time `step` changes.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, [step]);
+
   const dates = Array.from({ length: 14 }).map((_, i) => addDays(new Date(), i));
   const times = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
 
