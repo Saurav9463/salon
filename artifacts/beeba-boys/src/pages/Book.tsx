@@ -356,7 +356,7 @@ export default function Book() {
                 <button
                   onClick={handleBook}
                   disabled={!details.client_name || !details.client_phone || isBooking}
-                  className="ghost-btn-gold bg-primary text-primary-foreground hover:bg-primary/90 border-none px-8 py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-primary !text-primary-foreground hover:bg-primary/90 border-none px-8 py-4 font-mono tracking-widest uppercase text-sm cursor-pointer transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isBooking ? "Confirming..." : "Confirm Booking"}
                 </button>
