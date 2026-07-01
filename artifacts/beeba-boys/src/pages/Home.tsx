@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -228,112 +229,121 @@ export default function Home() {
   );
 }
 
-// Horizontal gallery carousel with working prev/next arrow buttons.
-// Images use object-contain so the full photo always renders instead
-// of being cropped by a fixed-aspect box.
+// Single-frame "The Work" carousel.
 //
-// The arrows navigate by index and land exactly on the next/previous
-// card's snap position, rather than nudging the scroll container by an
-// approximate pixel amount. Rapid clicking is ignored while a scroll is
-// already animating so the container can't be told to move again mid-
-// transition -- that's what previously left the carousel stuck between
-// two cards showing a sliver of image against a black background.
+// Previously this used native horizontal scroll-snap. On real devices the
+// browser was free to rest the scroll position anywhere between snap
+// points (including the trailing padding after the last card), which is
+// what produced the empty near-black frame after swiping -- the section
+// background (near-black in this theme) showing through with no image
+// on top of it.
+//
+// This version drives the carousel entirely from React state instead of
+// relying on native scroll physics: a flex "track" is translated by
+// exactly `-index * 100%`, so the visible frame is always precisely one
+// full slide -- never a sliver, gap, or in-between position. Prev/Next
+// wrap around, and the same index powers touch-swipe, the arrow buttons,
+// and the dot indicators, so all three stay in sync.
+//
+// Images use object-cover inside a fixed-aspect frame so every photo
+// fills the frame edge-to-edge with no letterboxing or black bars,
+// regardless of its original dimensions.
 function WorkGalleryCarousel({ images }: { images: string[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isAnimatingRef = useRef(false);
+  const [index, setIndex] = useState(0);
+  const total = images.length;
 
-  const scrollToIndex = (index: number) => {
-    const container = scrollRef.current;
-    if (!container || isAnimatingRef.current) return;
+  const touchStartX = useRef<number | null>(null);
+  const touchDeltaX = useRef(0);
 
-    const cards = container.querySelectorAll<HTMLElement>("[data-gallery-card]");
-    const clampedIndex = Math.max(0, Math.min(index, cards.length - 1));
-    const target = cards[clampedIndex];
-    if (!target) return;
+  const goTo = (i: number) => {
+    if (total === 0) return;
+    setIndex(((i % total) + total) % total);
+  };
+  const goNext = () => goTo(index + 1);
+  const goPrev = () => goTo(index - 1);
 
-    isAnimatingRef.current = true;
-    container.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
-
-    // Release the lock once the scroll settles. Prefer the native
-    // `scrollend` event where supported and fall back to a timeout that
-    // comfortably covers the "smooth" scroll duration otherwise.
-    let settled = false;
-    const release = () => {
-      if (settled) return;
-      settled = true;
-      isAnimatingRef.current = false;
-      container.removeEventListener("scrollend", release);
-    };
-    if ("onscrollend" in container) {
-      container.addEventListener("scrollend", release, { once: true });
-    }
-    window.setTimeout(release, 700);
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchDeltaX.current = 0;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+  };
+  const onTouchEnd = () => {
+    const delta = touchDeltaX.current;
+    touchStartX.current = null;
+    touchDeltaX.current = 0;
+    const SWIPE_THRESHOLD = 40;
+    if (delta > SWIPE_THRESHOLD) goPrev();
+    else if (delta < -SWIPE_THRESHOLD) goNext();
   };
 
-  const getCurrentIndex = () => {
-    const container = scrollRef.current;
-    if (!container) return 0;
-    const cards = Array.from(container.querySelectorAll<HTMLElement>("[data-gallery-card]"));
-    let closest = 0;
-    let closestDistance = Infinity;
-    cards.forEach((card, i) => {
-      const distance = Math.abs(card.offsetLeft - container.scrollLeft);
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closest = i;
-      }
-    });
-    return closest;
-  };
-
-  const goToAdjacentCard = (direction: 1 | -1) => {
-    scrollToIndex(getCurrentIndex() + direction);
-  };
+  if (total === 0) return null;
 
   return (
-    <div className="relative">
+    <div className="relative px-4 md:px-8">
       <div
-        ref={scrollRef}
-        className="flex gap-3 md:gap-4 px-4 md:px-8 overflow-x-auto pb-4 md:pb-8 snap-x no-scrollbar"
-        style={{
-          scrollSnapType: "x mandatory",
-          WebkitOverflowScrolling: "touch",
-        }}
+        className="relative w-full h-[260px] sm:h-[380px] md:h-[520px] overflow-hidden border border-border bg-card select-none touch-pan-y"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
-        {images.map((img, i) => (
-          <div
-            key={i}
-            data-gallery-card
-            className="min-w-[80vw] md:min-w-[400px] h-[240px] md:h-[500px] shrink-0 snap-center border border-border overflow-hidden group bg-black flex items-center justify-center"
-          >
-            <img
-              src={img}
-              alt={`Beeba Boys Gallery ${i + 1}`}
-              className="w-full h-full object-contain transition-all duration-700 group-hover:scale-105"
-            />
-          </div>
-        ))}
+        <div
+          className="flex h-full transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${index * 100}%)`, width: `${total * 100}%` }}
+        >
+          {images.map((img, i) => (
+            <div key={i} className="h-full shrink-0" style={{ width: `${100 / total}%` }}>
+              <img
+                src={img}
+                alt={`Beeba Boys Gallery ${i + 1}`}
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Prev arrow */}
-      <button
-        type="button"
-        onClick={() => goToAdjacentCard(-1)}
-        aria-label="Previous image"
-        className="hidden sm:flex absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
-      >
-        <ArrowLeft size={20} />
-      </button>
+      {total > 1 && (
+        <>
+          {/* Prev arrow */}
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Previous image"
+            className="flex absolute left-6 md:left-10 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
 
-      {/* Next arrow */}
-      <button
-        type="button"
-        onClick={() => goToAdjacentCard(1)}
-        aria-label="Next image"
-        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
-      >
-        <ArrowRight size={20} />
-      </button>
+          {/* Next arrow */}
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Next image"
+            className="flex absolute right-6 md:right-10 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
+          >
+            <ArrowRight size={20} />
+          </button>
+
+          {/* Dots */}
+          <div className="flex justify-center gap-2 mt-4 md:mt-6">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => goTo(i)}
+                aria-label={`Go to image ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === index ? "w-6 bg-primary" : "w-1.5 bg-border hover:bg-primary/50"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
