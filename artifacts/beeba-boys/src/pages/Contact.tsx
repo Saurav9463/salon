@@ -86,7 +86,7 @@ export default function Contact() {
               <button 
                 type="submit" 
                 disabled={isPending}
-                className="ghost-btn-gold w-full py-4 bg-primary text-primary-foreground hover:bg-primary/90 border-none disabled:opacity-50"
+                className="w-full py-4 bg-primary !text-primary-foreground hover:bg-primary/90 border-none font-mono tracking-widest uppercase text-sm cursor-pointer transition-colors duration-300 disabled:opacity-50"
               >
                 {isPending ? "Sending..." : "Send Message"}
               </button>
