@@ -18,7 +18,18 @@ export default function Services() {
   }, []);
 
   const services = servicesData?.length ? servicesData : FALLBACK_SERVICES;
-  const categories = [...new Set(services.map(s => s.category))];
+
+  // Group by a normalized (trimmed, lowercased) key so that categories which
+  // differ only in casing or stray whitespace (e.g. "Hair" vs "hair " saved
+  // from an older version of the admin form) are merged into a single
+  // section instead of rendering as two separate blocks. We keep the first
+  // occurrence's original spelling/casing as the display label.
+  const categoryMap = new Map<string, string>();
+  services.forEach(s => {
+    const norm = (s.category ?? "").trim().toLowerCase();
+    if (!categoryMap.has(norm)) categoryMap.set(norm, (s.category ?? "").trim());
+  });
+  const categories = Array.from(categoryMap.entries()); // [normalizedKey, displayLabel][]
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -41,11 +52,11 @@ export default function Services() {
           </div>
         ) : (
           <div className="grid gap-20">
-            {categories.map(category => (
-              <div key={category}>
-                <h2 className="text-3xl font-serif mb-8 text-foreground border-b border-border pb-4">{category}</h2>
+            {categories.map(([normKey, label]) => (
+              <div key={normKey}>
+                <h2 className="text-3xl font-serif mb-8 text-foreground border-b border-border pb-4">{label}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {services.filter(s => s.category === category && s.active).map(service => (
+                  {services.filter(s => (s.category ?? "").trim().toLowerCase() === normKey && s.active).map(service => (
                     <div key={service.id} className="bg-card border border-border p-6 flex flex-col hover:border-primary/50 transition-colors group">
                       <div className="flex justify-between items-start mb-4">
                         <h3 className="text-xl font-serif group-hover:text-primary transition-colors">{service.name}</h3>
