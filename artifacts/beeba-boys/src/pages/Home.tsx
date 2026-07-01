@@ -231,15 +231,63 @@ export default function Home() {
 // Horizontal gallery carousel with working prev/next arrow buttons.
 // Images use object-contain so the full photo always renders instead
 // of being cropped by a fixed-aspect box.
+//
+// The arrows navigate by index and land exactly on the next/previous
+// card's snap position, rather than nudging the scroll container by an
+// approximate pixel amount. Rapid clicking is ignored while a scroll is
+// already animating so the container can't be told to move again mid-
+// transition -- that's what previously left the carousel stuck between
+// two cards showing a sliver of image against a black background.
 function WorkGalleryCarousel({ images }: { images: string[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isAnimatingRef = useRef(false);
 
-  const scrollByCard = (direction: 1 | -1) => {
+  const scrollToIndex = (index: number) => {
     const container = scrollRef.current;
-    if (!container) return;
-    const card = container.querySelector<HTMLElement>("[data-gallery-card]");
-    const amount = card ? card.offsetWidth + 16 : container.clientWidth * 0.8;
-    container.scrollBy({ left: direction * amount, behavior: "smooth" });
+    if (!container || isAnimatingRef.current) return;
+
+    const cards = container.querySelectorAll<HTMLElement>("[data-gallery-card]");
+    const clampedIndex = Math.max(0, Math.min(index, cards.length - 1));
+    const target = cards[clampedIndex];
+    if (!target) return;
+
+    isAnimatingRef.current = true;
+    container.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
+
+    // Release the lock once the scroll settles. Prefer the native
+    // `scrollend` event where supported and fall back to a timeout that
+    // comfortably covers the "smooth" scroll duration otherwise.
+    let settled = false;
+    const release = () => {
+      if (settled) return;
+      settled = true;
+      isAnimatingRef.current = false;
+      container.removeEventListener("scrollend", release);
+    };
+    if ("onscrollend" in container) {
+      container.addEventListener("scrollend", release, { once: true });
+    }
+    window.setTimeout(release, 700);
+  };
+
+  const getCurrentIndex = () => {
+    const container = scrollRef.current;
+    if (!container) return 0;
+    const cards = Array.from(container.querySelectorAll<HTMLElement>("[data-gallery-card]"));
+    let closest = 0;
+    let closestDistance = Infinity;
+    cards.forEach((card, i) => {
+      const distance = Math.abs(card.offsetLeft - container.scrollLeft);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closest = i;
+      }
+    });
+    return closest;
+  };
+
+  const goToAdjacentCard = (direction: 1 | -1) => {
+    scrollToIndex(getCurrentIndex() + direction);
   };
 
   return (
@@ -270,7 +318,7 @@ function WorkGalleryCarousel({ images }: { images: string[] }) {
       {/* Prev arrow */}
       <button
         type="button"
-        onClick={() => scrollByCard(-1)}
+        onClick={() => goToAdjacentCard(-1)}
         aria-label="Previous image"
         className="hidden sm:flex absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
       >
@@ -280,7 +328,7 @@ function WorkGalleryCarousel({ images }: { images: string[] }) {
       {/* Next arrow */}
       <button
         type="button"
-        onClick={() => scrollByCard(1)}
+        onClick={() => goToAdjacentCard(1)}
         aria-label="Next image"
         className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
       >
