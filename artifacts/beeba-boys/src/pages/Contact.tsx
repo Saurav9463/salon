@@ -126,14 +126,23 @@ export default function Contact() {
               </div>
             </div>
             
-            {/* Map Placeholder */}
-            <div className="w-full h-[300px] bg-muted border border-border flex items-center justify-center relative overflow-hidden">
+            {/* Map — click to open our location in Google Maps */}
+            <a
+              href="https://maps.app.goo.gl/eEee5KJGe4hUxkmJ6"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open Beeba Boys location in Google Maps"
+              className="w-full h-[300px] bg-muted border border-border flex items-center justify-center relative overflow-hidden group cursor-pointer transition-colors hover:border-primary"
+            >
               <div className="hero-noise opacity-50" />
               <div className="relative z-10 text-center">
-                <MapPin className="text-primary mx-auto mb-2 opacity-50" size={32} />
-                <span className="font-mono text-sm tracking-widest text-muted-foreground uppercase">Map View</span>
+                <MapPin className="text-primary mx-auto mb-2 transition-transform group-hover:scale-110" size={32} />
+                <span className="font-mono text-sm tracking-widest text-foreground uppercase block mb-1">Beeba Boys</span>
+                <span className="font-mono text-xs tracking-widest text-muted-foreground uppercase underline underline-offset-4 decoration-primary/50">
+                  Open in Google Maps
+                </span>
               </div>
-            </div>
+            </a>
           </div>
         </div>
       </div>

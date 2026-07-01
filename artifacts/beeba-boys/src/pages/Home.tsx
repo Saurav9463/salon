@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { FALLBACK_SERVICES, FALLBACK_TEAM, TESTIMONIALS } from "@/lib/data";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 
 import shopInterior2 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.42_1782561889403.jpeg";
 import haircut1 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.34_1782561889402.jpeg";
@@ -178,34 +178,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="relative">
-          <div
-            className="flex gap-3 md:gap-4 px-4 md:px-8 overflow-x-auto pb-4 md:pb-8 snap-x no-scrollbar"
-            style={{
-              scrollSnapType: "x mandatory",
-              WebkitOverflowScrolling: "touch",
-              maskImage: "linear-gradient(to right, black 80%, transparent 100%)",
-              WebkitMaskImage: "linear-gradient(to right, black 80%, transparent 100%)",
-            }}
-          >
-            {galleryImages.map((img, i) => (
-              <div
-                key={i}
-                className="min-w-[80vw] md:min-w-[400px] h-[240px] md:h-[500px] shrink-0 snap-center border border-border overflow-hidden group"
-              >
-                <img
-                  src={img}
-                  alt={`Beeba Boys Gallery ${i + 1}`}
-                  className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 z-10 pointer-events-none scroll-arrow-pulse">
-            <ArrowRight size={24} className="text-primary" />
-          </div>
-        </div>
+        <WorkGalleryCarousel images={galleryImages} />
       </section>
 
       {/* Testimonials */}
@@ -251,6 +224,68 @@ export default function Home() {
       </section>
 
       <Footer />
+    </div>
+  );
+}
+
+// Horizontal gallery carousel with working prev/next arrow buttons.
+// Images use object-contain so the full photo always renders instead
+// of being cropped by a fixed-aspect box.
+function WorkGalleryCarousel({ images }: { images: string[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollByCard = (direction: 1 | -1) => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const card = container.querySelector<HTMLElement>("[data-gallery-card]");
+    const amount = card ? card.offsetWidth + 16 : container.clientWidth * 0.8;
+    container.scrollBy({ left: direction * amount, behavior: "smooth" });
+  };
+
+  return (
+    <div className="relative">
+      <div
+        ref={scrollRef}
+        className="flex gap-3 md:gap-4 px-4 md:px-8 overflow-x-auto pb-4 md:pb-8 snap-x no-scrollbar"
+        style={{
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {images.map((img, i) => (
+          <div
+            key={i}
+            data-gallery-card
+            className="min-w-[80vw] md:min-w-[400px] h-[240px] md:h-[500px] shrink-0 snap-center border border-border overflow-hidden group bg-black flex items-center justify-center"
+          >
+            <img
+              src={img}
+              alt={`Beeba Boys Gallery ${i + 1}`}
+              className="w-full h-full object-contain transition-all duration-700 group-hover:scale-105"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Prev arrow */}
+      <button
+        type="button"
+        onClick={() => scrollByCard(-1)}
+        aria-label="Previous image"
+        className="hidden sm:flex absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
+      >
+        <ArrowLeft size={20} />
+      </button>
+
+      {/* Next arrow */}
+      <button
+        type="button"
+        onClick={() => scrollByCard(1)}
+        aria-label="Next image"
+        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
+      >
+        <ArrowRight size={20} />
+      </button>
     </div>
   );
 }
