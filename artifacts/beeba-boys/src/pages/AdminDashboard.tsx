@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, Fragment } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu, Upload, Loader2, TrendingUp } from "lucide-react";
+import { Calendar, Users, Scissors, MessageSquare, LogOut, LayoutDashboard, X, CalendarX, Menu, Upload, Loader2, TrendingUp, Image as ImageIcon } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -41,6 +41,7 @@ export default function AdminDashboard() {
     { id: "bookings", label: "Bookings", icon: Calendar },
     { id: "services", label: "Services", icon: Scissors },
     { id: "team", label: "Team", icon: Users },
+    { id: "gallery", label: "Gallery", icon: ImageIcon },
     { id: "messages", label: "Messages", icon: MessageSquare },
   ];
 
@@ -130,6 +131,7 @@ export default function AdminDashboard() {
           {activeTab === "bookings" && <BookingsTab />}
           {activeTab === "services" && <ServicesTab />}
           {activeTab === "team" && <TeamTab />}
+          {activeTab === "gallery" && <GalleryTab />}
           {activeTab === "messages" && <MessagesTab />}
         </div>
       </main>
@@ -741,7 +743,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // Reusable "upload a photo from device" control — replaces the old
 // paste-a-URL text field. Uploads to Supabase Storage and calls
 // onChange with the resulting public URL once done.
-function PhotoUploadField({ value, onChange, folder = "team" }: { value: string; onChange: (url: string) => void; folder?: string }) {
+function PhotoUploadField({ value, onChange, folder = "team", shape = "circle" }: { value: string; onChange: (url: string) => void; folder?: string; shape?: "circle" | "square" }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
@@ -765,7 +767,7 @@ function PhotoUploadField({ value, onChange, folder = "team" }: { value: string;
   return (
     <div>
       <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted flex items-center justify-center shrink-0">
+        <div className={`w-16 h-16 ${shape === "circle" ? "rounded-full" : "rounded-none"} overflow-hidden border border-border bg-muted flex items-center justify-center shrink-0`}>
           {value ? (
             <img src={value} alt="Preview" className="w-full h-full object-cover" />
           ) : (
@@ -1137,6 +1139,211 @@ function TeamTab() {
           <div style={{textAlign:"center",padding:"32px 0",color:"#6B6560",fontFamily:"DM Mono",fontSize:13}}>No team members yet.</div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Gallery categories shown across the public site's filter pills
+// (Gallery.tsx) — kept in sync here so new uploads always land in a
+// category visitors can actually filter by.
+const GALLERY_CATEGORIES = ["Haircut", "Beard", "Interior", "Styling", "Facial"];
+
+function AddGalleryImageModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [form, setForm] = useState({ image_url: "", category: GALLERY_CATEGORIES[0] });
+  const [isPending, setIsPending] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.image_url) {
+      setFormError("Please upload a photo first.");
+      return;
+    }
+    setFormError("");
+    setIsPending(true);
+    const { error } = await supabase.from("gallery").insert([{
+      image_url: form.image_url,
+      category: form.category,
+    }]);
+    if (error) {
+      console.error("Add gallery image error:", error);
+      setFormError("Failed to save. Please try again.");
+      setIsPending(false);
+      return;
+    }
+    setIsPending(false);
+    onSuccess();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="bg-card border border-border w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"><X size={20} /></button>
+        <h2 className="font-serif text-2xl mb-6">Add Gallery Photo</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Photo">
+            <PhotoUploadField
+              value={form.image_url}
+              onChange={url => setForm({ ...form, image_url: url })}
+              folder="gallery"
+              shape="square"
+            />
+          </Field>
+          <Field label="Category">
+            <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="admin-input">
+              {GALLERY_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </Field>
+          {formError && <p className="text-xs text-destructive">{formError}</p>}
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 border border-border py-3 font-mono text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+            <button type="submit" disabled={isPending} className="flex-1 bg-primary text-primary-foreground py-3 font-mono text-sm uppercase tracking-widest disabled:opacity-60">
+              {isPending ? "Saving..." : "Add Photo"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function GalleryTab() {
+  const [images, setImages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingImage, setEditingImage] = useState<any>(null);
+
+  const fetchImages = async () => {
+    const { data, error } = await supabase
+      .from("gallery")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) console.error("Gallery error:", error);
+    setImages(data ?? []);
+    setIsLoading(false);
+  };
+
+  useEffect(() => { fetchImages(); }, []);
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Delete this photo? This removes it from the Gallery page and the homepage Work section.")) {
+      const { error } = await supabase.from("gallery").delete().eq("id", id);
+      if (error) {
+        console.error("Delete gallery image error:", error);
+        alert("Failed to delete. Please try again.");
+      }
+      fetchImages();
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    const { error } = await supabase
+      .from("gallery")
+      .update({
+        image_url: editingImage.image_url,
+        category: editingImage.category,
+      })
+      .eq("id", editingImage.id);
+    if (!error) {
+      setImages(images.map(g => g.id === editingImage.id ? editingImage : g));
+      setEditingImage(null);
+    } else {
+      console.error("Update gallery image error:", error);
+      alert("Failed to save changes. Please try again.");
+    }
+  };
+
+  return (
+    <div className="min-w-0">
+      {showAdd && <AddGalleryImageModal onClose={() => setShowAdd(false)} onSuccess={fetchImages} />}
+
+      {/* ===== EDIT MODAL ===== */}
+      {editingImage && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"#111111",border:"1px solid #1E1E1E",width:"100%",maxWidth:480,padding:24,maxHeight:"90vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+              <h2 style={{fontFamily:"Cormorant Garamond,serif",fontSize:22,color:"#F5F0EB"}}>Edit Photo</h2>
+              <button onClick={() => setEditingImage(null)} style={{color:"#6B6560",background:"none",border:"none",cursor:"pointer",padding:4}}>
+                <X size={22} />
+              </button>
+            </div>
+
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:10,fontFamily:"DM Mono",textTransform:"uppercase",letterSpacing:"0.1em",color:"#6B6560",marginBottom:6}}>Photo</div>
+              <PhotoUploadField
+                value={editingImage.image_url ?? ""}
+                onChange={url => setEditingImage({ ...editingImage, image_url: url })}
+                folder="gallery"
+                shape="square"
+              />
+            </div>
+
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:10,fontFamily:"DM Mono",textTransform:"uppercase",letterSpacing:"0.1em",color:"#6B6560",marginBottom:6}}>Category</div>
+              <select value={editingImage.category} onChange={e => setEditingImage({ ...editingImage, category: e.target.value })}
+                style={{width:"100%",background:"#0A0A0A",border:"1px solid #1E1E1E",color:"#F5F0EB",padding:"10px 14px",fontSize:14,outline:"none"}}>
+                {GALLERY_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div style={{display:"flex",gap:12}}>
+              <button onClick={handleSaveEdit}
+                style={{flex:1,background:"#C9A96E",color:"#0A0A0A",border:"none",padding:"12px",fontFamily:"DM Mono",fontSize:12,textTransform:"uppercase",letterSpacing:"0.1em",cursor:"pointer"}}>
+                Save Changes
+              </button>
+              <button onClick={() => setEditingImage(null)}
+                style={{flex:1,background:"none",border:"1px solid #1E1E1E",color:"#F5F0EB",padding:"12px",fontFamily:"DM Mono",fontSize:12,textTransform:"uppercase",letterSpacing:"0.1em",cursor:"pointer"}}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{marginBottom:8,color:"#6B6560",fontSize:13,fontFamily:"DM Mono"}}>
+        Photos here power both the "The Work" preview on the homepage and the full /gallery page.
+        Newest uploads appear first.
+      </div>
+
+      <div style={{marginBottom:24,display:"flex",justifyContent:"flex-end"}}>
+        <button onClick={() => setShowAdd(true)}
+          style={{background:"#C9A96E",color:"#0A0A0A",border:"none",padding:"12px 24px",fontFamily:"DM Mono",fontSize:12,textTransform:"uppercase",letterSpacing:"0.1em",cursor:"pointer",width:"100%",maxWidth:200}}>
+          + Add Photo
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div style={{color:"#6B6560",fontFamily:"DM Mono",fontSize:13,padding:16}}>Loading gallery...</div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {images.map(g => (
+            <div key={g.id} style={{background:"#111111",border:"1px solid #1E1E1E",position:"relative",display:"flex",flexDirection:"column"}}>
+              <div style={{width:"100%",aspectRatio:"1/1",overflow:"hidden",background:"#1E1E1E"}}>
+                <img src={g.image_url} alt={g.category} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+              </div>
+              <div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{fontSize:11,fontFamily:"DM Mono",textTransform:"uppercase",color:"#C9A96E",letterSpacing:"0.05em"}}>{g.category}</div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={() => setEditingImage(g)}
+                    style={{flex:1,fontSize:11,fontFamily:"DM Mono",textTransform:"uppercase",border:"1px solid #C9A96E",color:"#C9A96E",padding:"6px 0",background:"none",cursor:"pointer",letterSpacing:"0.05em"}}>
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(g.id)}
+                    style={{flex:1,fontSize:11,fontFamily:"DM Mono",textTransform:"uppercase",border:"1px solid rgba(239,68,68,0.4)",color:"#ef4444",padding:"6px 0",background:"none",cursor:"pointer"}}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {images.length === 0 && (
+            <div style={{gridColumn:"1/-1",textAlign:"center",padding:"32px 0",color:"#6B6560",fontFamily:"DM Mono",fontSize:13}}>
+              No gallery photos yet — the site is showing its built-in defaults. Add one above.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

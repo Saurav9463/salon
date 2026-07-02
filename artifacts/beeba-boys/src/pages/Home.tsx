@@ -13,19 +13,29 @@ import haircut3 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.55_178256188940
 export default function Home() {
   const [servicesData, setServicesData] = useState<any[]>([]);
   const [teamData, setTeamData] = useState<any[]>([]);
+  const [galleryData, setGalleryData] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.from("services").select("*").eq("active", true)
       .then(({ data }) => { if (data) setServicesData(data); });
     supabase.from("team").select("*").eq("active", true)
       .then(({ data }) => { if (data) setTeamData(data); });
+    supabase.from("gallery").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setGalleryData(data); });
   }, []);
 
   const services = servicesData?.length ? servicesData : FALLBACK_SERVICES;
   const team = teamData?.length ? teamData : FALLBACK_TEAM;
 
   const previewServices = services.slice(0, 4);
-  const galleryImages = [haircut1, haircut2, haircut3];
+  // Prefer whatever the admin has uploaded to the "gallery" table; fall
+  // back to the built-in photos so the section is never empty on a
+  // fresh install with no gallery rows yet. Capped at 6 so the preview
+  // grid on the homepage stays a tidy size (the full set is on /gallery).
+  const fallbackGalleryImages = [haircut1, haircut2, haircut3];
+  const galleryImages = galleryData.length
+    ? galleryData.slice(0, 6).map((g) => g.image_url)
+    : fallbackGalleryImages;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
