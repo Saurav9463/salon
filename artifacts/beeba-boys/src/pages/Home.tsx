@@ -252,6 +252,35 @@ function WorkGalleryCarousel({ images }: { images: string[] }) {
   const [index, setIndex] = useState(0);
   const total = images.length;
 
+  // Tracks which slides have actually finished downloading. On a slow
+  // connection an image can still be mid-download the moment someone
+  // swipes to it -- previously that showed as a flat black frame (the
+  // near-black theme background showing through an empty <img>), which
+  // reads as broken even though it's really just "still loading". Now we
+  // show a small spinner over the same dark frame until the image's
+  // onLoad fires, so a not-yet-loaded slide reads as "loading", not
+  // "broken".
+  const [loaded, setLoaded] = useState<boolean[]>(() => images.map(() => false));
+  const imgRefs = useRef<Array<HTMLImageElement | null>>([]);
+  const markLoaded = (i: number) =>
+    setLoaded((prev) => {
+      if (prev[i]) return prev;
+      const next = [...prev];
+      next[i] = true;
+      return next;
+    });
+
+  // Cache-hit safety net: if an image is already in the browser cache it
+  // can finish loading (img.complete) before React ever attaches the
+  // onLoad listener below, which would otherwise leave that slide stuck
+  // showing the spinner forever. Sweep once after mount and mark any
+  // already-complete images as loaded.
+  useEffect(() => {
+    imgRefs.current.forEach((el, i) => {
+      if (el && el.complete && el.naturalWidth > 0) markLoaded(i);
+    });
+  }, []);
+
   const touchStartX = useRef<number | null>(null);
   const touchDeltaX = useRef(0);
 
@@ -294,12 +323,29 @@ function WorkGalleryCarousel({ images }: { images: string[] }) {
           style={{ transform: `translateX(-${index * 100}%)`, width: `${total * 100}%` }}
         >
           {images.map((img, i) => (
-            <div key={i} className="h-full shrink-0" style={{ width: `${100 / total}%` }}>
+            <div key={i} className="relative h-full shrink-0" style={{ width: `${100 / total}%` }}>
+              {/* Spinner placeholder, visible until this slide's image has loaded */}
+              <div
+                className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                  loaded[i] ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+                aria-hidden={loaded[i]}
+              >
+                <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+              </div>
               <img
+                ref={(el) => { imgRefs.current[i] = el; }}
                 src={img}
                 alt={`Beeba Boys Gallery ${i + 1}`}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  loaded[i] ? "opacity-100" : "opacity-0"
+                }`}
                 draggable={false}
+                loading="eager"
+                decoding="async"
+                // @ts-ignore -- fetchPriority is valid HTML but not yet in older React DOM typings
+                fetchpriority={i === 0 ? "high" : "auto"}
+                onLoad={() => markLoaded(i)}
               />
             </div>
           ))}
