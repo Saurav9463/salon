@@ -1,11 +1,9 @@
-import * as React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Link } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { FALLBACK_SERVICES, FALLBACK_TEAM, TESTIMONIALS } from "@/lib/data";
-import { ArrowRight, ArrowLeft } from "lucide-react";
 
 import shopInterior2 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.42_1782561889403.jpeg";
 import haircut1 from "@assets/WhatsApp_Image_2026-06-27_at_17.30.34_1782561889402.jpeg";
@@ -179,7 +177,27 @@ export default function Home() {
           </Link>
         </div>
 
-        <WorkGalleryCarousel images={galleryImages} />
+        <div className="container mx-auto px-4 md:px-8">
+          {/* Static grid, same pattern as the Master Barbers section above: every
+              image is just a plain <img> in a fixed-height box, all rendered and
+              loaded together with no swipe/index state to get out of sync and no
+              arrow buttons that can land on an empty frame. */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+            {galleryImages.map((img, i) => (
+              <div
+                key={i}
+                className="w-full h-[200px] sm:h-[300px] md:h-[380px] bg-background overflow-hidden border border-border relative group"
+              >
+                <img
+                  src={img}
+                  alt={`Beeba Boys Gallery ${i + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent pointer-events-none" />
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Testimonials */}
@@ -225,194 +243,6 @@ export default function Home() {
       </section>
 
       <Footer />
-    </div>
-  );
-}
-
-// Single-frame "The Work" carousel.
-//
-// Previously this used native horizontal scroll-snap. On real devices the
-// browser was free to rest the scroll position anywhere between snap
-// points (including the trailing padding after the last card), which is
-// what produced the empty near-black frame after swiping -- the section
-// background (near-black in this theme) showing through with no image
-// on top of it.
-//
-// This version drives the carousel entirely from React state instead of
-// relying on native scroll physics: a flex "track" is translated by
-// exactly `-index * 100%`, so the visible frame is always precisely one
-// full slide -- never a sliver, gap, or in-between position. Prev/Next
-// wrap around, and the same index powers touch-swipe, the arrow buttons,
-// and the dot indicators, so all three stay in sync.
-//
-// Images use object-cover inside a fixed-aspect frame so every photo
-// fills the frame edge-to-edge with no letterboxing or black bars,
-// regardless of its original dimensions.
-function WorkGalleryCarousel({ images }: { images: string[] }) {
-  const [index, setIndex] = useState(0);
-  const total = images.length;
-
-  // Tracks which slides have actually finished downloading. On a slow
-  // connection an image can still be mid-download the moment someone
-  // swipes to it -- previously that showed as a flat black frame (the
-  // near-black theme background showing through an empty <img>), which
-  // reads as broken even though it's really just "still loading". Now we
-  // show a small spinner over the same dark frame until the image's
-  // onLoad fires, so a not-yet-loaded slide reads as "loading", not
-  // "broken".
-  const [loaded, setLoaded] = useState<boolean[]>(() => images.map(() => false));
-  const [failed, setFailed] = useState<boolean[]>(() => images.map(() => false));
-  const imgRefs = useRef<Array<HTMLImageElement | null>>([]);
-  const markLoaded = (i: number) =>
-    setLoaded((prev) => {
-      if (prev[i]) return prev;
-      const next = [...prev];
-      next[i] = true;
-      return next;
-    });
-  const markFailed = (i: number) =>
-    setFailed((prev) => {
-      if (prev[i]) return prev;
-      const next = [...prev];
-      next[i] = true;
-      return next;
-    });
-
-  // Cache-hit safety net: if an image is already in the browser cache it
-  // can finish loading (img.complete) before React ever attaches the
-  // onLoad listener below, which would otherwise leave that slide stuck
-  // showing the spinner forever. Sweep once after mount and mark any
-  // already-complete images as loaded.
-  useEffect(() => {
-    imgRefs.current.forEach((el, i) => {
-      if (el && el.complete && el.naturalWidth > 0) markLoaded(i);
-    });
-  }, []);
-
-  const touchStartX = useRef<number | null>(null);
-  const touchDeltaX = useRef(0);
-
-  const goTo = (i: number) => {
-    if (total === 0) return;
-    setIndex(((i % total) + total) % total);
-  };
-  const goNext = () => goTo(index + 1);
-  const goPrev = () => goTo(index - 1);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchDeltaX.current = 0;
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
-  };
-  const onTouchEnd = () => {
-    const delta = touchDeltaX.current;
-    touchStartX.current = null;
-    touchDeltaX.current = 0;
-    const SWIPE_THRESHOLD = 40;
-    if (delta > SWIPE_THRESHOLD) goPrev();
-    else if (delta < -SWIPE_THRESHOLD) goNext();
-  };
-
-  if (total === 0) return null;
-
-  return (
-    <div className="relative px-4 md:px-8">
-      <div
-        className="relative w-full h-[260px] sm:h-[380px] md:h-[520px] overflow-hidden border border-border bg-card select-none touch-pan-y"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        <div
-          className="flex h-full transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${index * 100}%)`, width: `${total * 100}%` }}
-        >
-          {images.map((img, i) => (
-            <div key={i} className="relative h-full shrink-0 bg-card" style={{ width: `${100 / total}%` }}>
-              {/* Spinner placeholder, visible until this slide's image has loaded (and hasn't errored) */}
-              <div
-                className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-                  loaded[i] || failed[i] ? "opacity-0 pointer-events-none" : "opacity-100"
-                }`}
-                aria-hidden={loaded[i] || failed[i]}
-              >
-                <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-              </div>
-
-              {/* Visible fallback if the image genuinely fails to load (e.g. a bad URL),
-                  so a broken asset reads as "unavailable", never as an empty black box. */}
-              {failed[i] && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <path d="M3 16l5-5 4 4 5-5 4 4" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                  </svg>
-                  <span className="text-xs font-mono uppercase tracking-widest">Image unavailable</span>
-                </div>
-              )}
-
-              <img
-                ref={(el) => { imgRefs.current[i] = el; }}
-                src={img}
-                alt={`Beeba Boys Gallery ${i + 1}`}
-                className={`w-full h-full object-cover transition-opacity duration-300 ${
-                  loaded[i] && !failed[i] ? "opacity-100" : "opacity-0"
-                }`}
-                draggable={false}
-                loading="eager"
-                decoding="async"
-                // @ts-ignore -- fetchPriority is valid HTML but not yet in older React DOM typings
-                fetchpriority={i === 0 ? "high" : "auto"}
-                onLoad={() => markLoaded(i)}
-                onError={() => markFailed(i)}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {total > 1 && (
-        <>
-          {/* Prev arrow */}
-          <button
-            type="button"
-            onClick={goPrev}
-            aria-label="Previous image"
-            className="flex absolute left-6 md:left-10 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-
-          {/* Next arrow */}
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Next image"
-            className="flex absolute right-6 md:right-10 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-background/80 border border-primary/40 text-primary hover:bg-primary hover:text-background transition-colors"
-          >
-            <ArrowRight size={20} />
-          </button>
-
-          {/* Dots */}
-          <div className="flex justify-center gap-2 mt-4 md:mt-6">
-            {images.map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => goTo(i)}
-                aria-label={`Go to image ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === index ? "w-6 bg-primary" : "w-1.5 bg-border hover:bg-primary/50"
-                }`}
-              />
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
