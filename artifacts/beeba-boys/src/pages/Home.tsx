@@ -261,9 +261,17 @@ function WorkGalleryCarousel({ images }: { images: string[] }) {
   // onLoad fires, so a not-yet-loaded slide reads as "loading", not
   // "broken".
   const [loaded, setLoaded] = useState<boolean[]>(() => images.map(() => false));
+  const [failed, setFailed] = useState<boolean[]>(() => images.map(() => false));
   const imgRefs = useRef<Array<HTMLImageElement | null>>([]);
   const markLoaded = (i: number) =>
     setLoaded((prev) => {
+      if (prev[i]) return prev;
+      const next = [...prev];
+      next[i] = true;
+      return next;
+    });
+  const markFailed = (i: number) =>
+    setFailed((prev) => {
       if (prev[i]) return prev;
       const next = [...prev];
       next[i] = true;
@@ -323,22 +331,36 @@ function WorkGalleryCarousel({ images }: { images: string[] }) {
           style={{ transform: `translateX(-${index * 100}%)`, width: `${total * 100}%` }}
         >
           {images.map((img, i) => (
-            <div key={i} className="relative h-full shrink-0" style={{ width: `${100 / total}%` }}>
-              {/* Spinner placeholder, visible until this slide's image has loaded */}
+            <div key={i} className="relative h-full shrink-0 bg-card" style={{ width: `${100 / total}%` }}>
+              {/* Spinner placeholder, visible until this slide's image has loaded (and hasn't errored) */}
               <div
                 className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-                  loaded[i] ? "opacity-0 pointer-events-none" : "opacity-100"
+                  loaded[i] || failed[i] ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}
-                aria-hidden={loaded[i]}
+                aria-hidden={loaded[i] || failed[i]}
               >
                 <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
               </div>
+
+              {/* Visible fallback if the image genuinely fails to load (e.g. a bad URL),
+                  so a broken asset reads as "unavailable", never as an empty black box. */}
+              {failed[i] && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 16l5-5 4 4 5-5 4 4" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                  </svg>
+                  <span className="text-xs font-mono uppercase tracking-widest">Image unavailable</span>
+                </div>
+              )}
+
               <img
                 ref={(el) => { imgRefs.current[i] = el; }}
                 src={img}
                 alt={`Beeba Boys Gallery ${i + 1}`}
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
-                  loaded[i] ? "opacity-100" : "opacity-0"
+                  loaded[i] && !failed[i] ? "opacity-100" : "opacity-0"
                 }`}
                 draggable={false}
                 loading="eager"
@@ -346,6 +368,7 @@ function WorkGalleryCarousel({ images }: { images: string[] }) {
                 // @ts-ignore -- fetchPriority is valid HTML but not yet in older React DOM typings
                 fetchpriority={i === 0 ? "high" : "auto"}
                 onLoad={() => markLoaded(i)}
+                onError={() => markFailed(i)}
               />
             </div>
           ))}
